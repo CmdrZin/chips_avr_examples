@@ -1,0 +1,2 @@
+@ECHO OFF
+"C:\Program Files\Atmel\AVR Tools\AvrAssembler2\avrasm2.exe" -S "C:\DATA\Projects\SumoBot\SumoBot_Code_Dev\SumoTest\asm\labels.tmp" -fI -W+ie -C V2E -o "C:\DATA\Projects\SumoBot\SumoBot_Code_Dev\SumoTest\asm\SumoTest.hex" -d "C:\DATA\Projects\SumoBot\SumoBot_Code_Dev\SumoTest\asm\SumoTest.obj" -e "C:\DATA\Projects\SumoBot\SumoBot_Code_Dev\SumoTest\asm\SumoTest.eep" -m "C:\DATA\Projects\SumoBot\SumoBot_Code_Dev\SumoTest\asm\SumoTest.map" "C:\DATA\Projects\SumoBot\SumoBot_Code_Dev\SumoTest\asm\src\main.asm"

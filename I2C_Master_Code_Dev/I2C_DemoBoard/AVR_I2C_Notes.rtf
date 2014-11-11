@@ -1,0 +1,184 @@
+{\rtf1\ansi\ansicpg1252\deff0\deflang1033\deflangfe1033{\fonttbl{\f0\fswiss\fprq2\fcharset0 Arial;}{\f1\fswiss\fcharset0 Arial;}}
+{\*\generator Msftedit 5.41.21.2510;}\viewkind4\uc1\pard\nowidctlpar\f0\fs20 AVR_I2C_Notes.rtf\par
+03sep14 ndp\par
+01oct14\par
+\par
+ref1: ATmega164P_datasheet.pdf\par
+ref2: I2C Demo Board, 20MHz w/ display and keypad I/O "C:\\Data\\Personal\\VictorValleyCollege\\MicroInterface\\I2Cnet"\par
+ref3: \f1 Adding_I2C.rtf\f0\par
+\par
+\ldblquote The AVR TWI is byte-oriented and interrupt based. Interrupts are issued after all bus events, like\par
+reception of a byte or transmission of a START condition.\rdblquote  (Ch 18.6)\par
+\par
+\par
+IDEA: \strike Use AT Hayes protocol?\strike0  No, too complicated and does not use transport packets.\par
+\par
+\b Design Note\b0\par
+01oct14\par
+SInce the I2C Master Mode is interrupt driven, it essentially is a Launch and Forget operation.\par
+Use Error Flags and Status for process and results.\par
+\tab State:\tab IDLE, BUSY, ERROR\par
+\tab Error FLags: Set if in ERROR state. Bits for type of error detected.\par
+int i2c_write( SlaveAdrs, *buffer, byteCount )\tab 0: ok, 1: if BUSY, 2: ERROR\par
+int i2c_read( SlaveAdrs, *buffer, maxByteCount )\tab 0: ok, 1: if BUSY, 2: ERROR\par
+int i2c_checkState()\tab\tab\tab\tab 0: ok, 1: if BUSY, 2: ERROR\par
+int i2c_getErrorFlags()\tab\tab\tab\tab Error Flags. Write FAIL, Read FAIL, Detail Bits.\par
+int i2c_getReadStatus()\tab\tab\tab\tab 0: None, 1: Read Message byte count\par
+int util_genSum( *buffer, byteCount )\tab\tab CheckSum (manually add or compare)\par
+\par
+\par
+\b User Interface\b0\par
+1\tab\tab button\par
+4x4\tab\tab keypad\par
+1\tab\tab LED (blinks for mode)\par
+2 7-seg\tab\tab Dual seven segment (HEX) displays\par
+\par
+Show - - while idle.\par
+Push Button and hold to change modes. Inc each second. Release to select mode showing.\par
+0 = Test. Writes EchoBack type then issues Read. Loops at 1ms rate.\par
+1 = Read Slave and display bytes in sequence. Loops at 1ms rate.\par
+\tab Blank between each sequence. Alt dp between each data byte.\par
+2 = Load output buffer.\par
+\tab Every 2 keys are loaded as a byte. Show - - to indicate ready for next value.\par
+\tab Flast Number of Bytes in output buffer after each is added.\par
+\tab Press button to stop loading. Flash - - when done.\par
+3 = Display input buffer. Show index then show byte. 3 sec delay between bytes.\par
+4 = Clear output buffer. Flash - - when done.\par
+5 = Clear input buffer. Flash - - when done.\par
+\par
+NOTE: Change display to use one byte per digit to allow more than 16 charaters. (done)\par
+\tab Add -, blank, dp, etc.\par
+NOTE: Unify KeyPad and Display. Run each 10ms. KP, DS1, DS2, off one 10ms tic flag.(done)\par
+\par
+\par
+\b Packet Design\b0\par
+\pard\f1 Set up message packet with Header + N data bytes.[3]\par
+All messages are Header(type,bytes)+Data, ...+CKSUM. Max 15 bytes of data.\par
+A Zero byte message could be used as a command.\par
+\par
+Packet (16+1 bytes max)\par
+\tab Address\tab R/W + 7bit adrs\par
+\tab Header\tab\tab (b7:4) 4 bit TYPE + (b3:0) 4 bit data block length\par
+\tab CKSUM\tab\tab CS ^ Data then ROL with b7->b0\par
+\pard\nowidctlpar\f0\par
+Packet data:\tab SLA_W --> Header, Data0, ..., CKSUM\par
+\tab\tab SLA_R <--  Header, Data0, ..., CKSUM\par
+\par
+Master\par
+TYPE .. Set by Master Writing Data to Slave.\par
+  0\tab Normal Data Parcket. N=1-15 bytes\par
+\tab Slave Mode: ECHO\par
+\tab\tab\f1 Copy valid Type 0 I2C messages to I2C OUT. Ignores Tone messages.\par
+\tab Slave Mode: Any Other then ECHO\f0\par
+\tab\tab If the CKSUM is valid, the Slave will copy the message bytes into its Tone OUT \par
+\tab\tab buffer and out the message.\par
+\tab Else, ignore and set ERROR_CKSUM flag.\par
+Ex:\tab Buffer Data: 0x02, 0xXX, 0xYY, CKSUM\par
+\par
+  F\tab Set Parameters. N=2*n parameter pairs. Parameter Type, Value\par
+\tab LOOP(0):\tab Continuous output loop. 0:No..1->FE:loop times..FF:Infinite\par
+\tab Slave will output TONE OUT buffer 'loop times' to Tone generator. Default is 0.\par
+\par
+\tab AUTOAN(1):\tab Auto ACK/NACK Tone message. 0:No..1:Yes. Default = 0.\par
+\tab Slave will generate an ACK (0x06) Tone after receiving and validating an external Tone \par
+\tab message.\par
+\tab Slave will generate a NACK (0x15) Tone after receiving an invalid external Tone \par
+\tab message or timeout after receiveing some Tones.\par
+\tab Slave resets message index on timeout.\par
+\par
+\tab SYMTDLY(2):\tab Timeout Delay. N=Symbol delays to wait for next Symbol. Default = 3.\par
+\par
+\tab SYMRATE(3):\tab Symbol Rate. Rate to send Symbols. N=n * 10ms. Default = 10.\par
+\par
+\tab SYMDUR(4): \tab Symbol Duration. Time to hold Tone output. N=n * 10 ms. Default = 5.\par
+\par
+\tab MODE(6):\tab Set Mode\par
+\tab\tab Master sets Slave mode with Data byte.\par
+\pard\f1\tab\tab Data\par
+\tab\tab\tab INVALID(0)\par
+\tab\tab\tab NORMAL(1)\par
+\tab\tab\tab ECHO(2)\par
+\tab\tab\tab RAW(3)\par
+\tab\tab\tab CAL(4)\par
+\pard\nowidctlpar\f0\tab Ex:\tab Msg: 0xF6, 0x06, 0x01, CKSUM  .. Sets Slave Mode = NORMAL\par
+\par
+Slave\par
+TYPE .. Set by Slave responding to Read Data from Master.\par
+  0\tab Tone Data. N=1-15\par
+\tab Used when Slave is in NORMAL mode.\par
+\tab The OUT buffer message is built up from the Tone data received + CKSUM.\par
+Ex:\tab Buffer Data: 0x0n, 0xXX, ..., CKSUM\par
+\par
+  1\tab Echo Back. N=1-15\par
+\tab Used when Slave is in ECHO mode.\par
+\tab Slave sends back the OUT buffer which was filled from the IN buffer.\par
+Ex:\tab Buffer Data: 0x1n, 0xXX, ..., CKSUM\par
+\par
+  2\tab RAW Data. N=1\par
+\tab Used when Slave is in RAW mode.\par
+\tab\f1 Copy each 4-bit Tone symbol to I2C OUT as a one byte message.\f0\par
+\par
+  3\tab CAL Data\par
+\tab Used when Slave is in CAL mode.\par
+\tab\f1 Copy ADC upper 8 bits to I2C OUT as a one byte message.\f0\par
+\par
+  F\tab No Valid Data to Return. N=0. Just Type, CKSUM.\par
+\tab Slave returns this if there is no valid data message in the OUT buffer.\par
+\par
+\par
+\b Tone Packet\b0\par
+\pard\f1 Packet (16+1 bytes max)\par
+\tab Address\tab R/W + 7bit adrs\par
+\tab Header\tab\tab (b7:4) 4 bit TYPE + (b3:0) 4 bit data block length\par
+\tab CKSUM\tab\tab CS ^ Data then ROL with b7->b0\par
+\pard\nowidctlpar\f0\par
+\par
+When sending Read Slave, place SLA_R in buffer and then read data in behind it so the buffer has the Slave address and data it provided.\par
+\b NOTE: Only one buffer needed then?\b0  Yes.\par
+\par
+\par
+Use "Standardized" code modules.\par
+sys_timers.asm\par
+Ok..converted..\par
+04sep14\par
+Convert polled Master code to interrupt driven and for 20MHz CPU clock\par
+MOD: i2c_master.asm\par
+ADD: Input and output buffers instead of FIFOs.\par
+10sep14\par
+\pard\f1 Change Slave Adrs to 0x57.\par
+\pard\nowidctlpar\f0 11sep14\par
+Set up Master to Send Type 1 messages once each second.\par
+ADD: \f1 master_manager.asm\par
+\f0 Use 1ms and 10ms TIC flags to control services.\par
+MOD: sys_timers.asm\par
+i2c_service reduces to a Write OUT or Read IN operation.\par
+\b TODO: Store Slave address for multiple Slave support (i.e. LCD display, etc)\par
+\b0 15sep14\par
+Remove LED Bank test date mode.\par
+20sep14\par
+KeyPad problem..longer sample time..works\par
+22sep14\par
+Simple UI\par
+Use A,B,C,D for modes\par
+Show [--][A] for normal mode. 0-9 select message to send. Show number of last selection.\par
+Ex: [5][A] for message 5.\par
+A:\tab Normal. Send Type 0 mesasge based on number.\par
+B:\tab Echo\par
+C:\tab RAW\par
+D:\tab CAL\par
+I2C_master updated to select Mode and send messages..hmm..sending adrs+byte only..\par
+23sep14\par
+Flow\par
+    master_service\par
+\tab Check for new KP data.\par
+\tab    If new key\par
+\tab       Check for A-D and set mode to that type. Goto service I2C input.\par
+\tab\tab Check for E(*) or F(#) and ignore for now.\par
+\tab       If 0-7, send I2C Type 0 message. Goto service I2C input.\par
+\tab  Service I2C input.\par
+\tab  Service I2C output.\par
+25sep14\par
+Tweak sample msgs..\par
+\par
+}
+ 
