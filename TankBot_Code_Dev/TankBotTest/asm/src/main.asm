@@ -17,6 +17,9 @@
 .ORG	$0000
 		rjmp	RESET
 
+.ORG	PCI2addr				; 0x0c Pin Change Interrupt Request 2
+		rjmp	range_s_intr
+
 .ORG	OC2Aaddr				; 0x12 Timer/Counter2 Compare Match A
 		rjmp	st_tmr2A_intr
 
@@ -47,15 +50,16 @@ RESET:
 	call	st_init_tmr0
 	call	st_init_tmr1
 	call	st_init_tmr2
-;;	call	adc_init_hdwr
+	call	adc_init_hdwr
 	call	pwm_dc_init
 ;;	call	tank_demo_init
 ;;	call	range_ir_service_init
-;;	call	range_s_service_init
+	call	range_s_service_init
 ;
 	sei							; enable intr
 ;
 ; TEST++
+/*
 	ldi		r17, DIR_FWD
 	call	pwm_set_right_dir
 	ldi		r17, PWM_R_SLOW
@@ -66,12 +70,10 @@ RESET:
 	ldi		r17, PWM_L_MED
 	call	pwm_set_left
 ; TEST--
+ */
 ;
 main_m:
 ;
-m_skip00:
-	dec		r3
-	brne	m_skip00
 ;
 m_skip01:
 ;;;	call	tank_demo

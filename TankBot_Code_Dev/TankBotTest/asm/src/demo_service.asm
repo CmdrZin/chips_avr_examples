@@ -46,6 +46,41 @@ tank_demo_init:
 ;
 	ret
 
+/* Sonar display test code.
+ *
+m_skip10:
+	lds		r16, range_s_left
+	cpi		r16, 50
+	brge	m_skip11
+	cbi		PORTD, PWM_A2_RIGHT
+	rjmp	m_skip20
+m_skip11:
+	sbi		PORTD, PWM_A2_RIGHT
+;
+m_skip20:
+	lds		r16, range_s_center
+	cpi		r16, 50
+	brge	m_skip21
+	cbi		PORTD, PWM_A1_RIGHT
+	rjmp	m_skip30
+m_skip21:
+	sbi		PORTD, PWM_A1_RIGHT
+;
+m_skip30:
+	lds		r16, range_s_right
+	cpi		r16, 50
+	brge	m_skip31
+	cbi		PORTD, PWM_B1_LEFT
+	rjmp	m_skip40
+m_skip31:
+	sbi		PORTD, PWM_B1_LEFT
+;
+m_skip40:
+ *
+ */
+
+
+
 /*
  * Some simple state machines to demonstrate to system.
  */

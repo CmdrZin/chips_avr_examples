@@ -124,7 +124,7 @@ st_init_tmr1:
  * NOTE: Rate set for 56.4us
  */
 st_init_tmr2:
-	ldi		R16, 140
+	ldi		R16, 70				; 140
 	sts		OCR2A, R16
 ;
 	ldi		R16, (1<<WGM01)		; reset on CTC match
@@ -210,6 +210,8 @@ st_skip00:
  * output reg:	none
  * resources:	st_tmr2_count	SRAM	1 byte
  *
+ * Limit Max count to 255 for NO rollover.
+ *
  */
 st_tmr2A_intr:
 ; Save SREG
@@ -221,6 +223,10 @@ st_tmr2A_intr:
 ;
 	lds		r16, st_tmr2_count
 	inc		r16
+	brne	st2A_skip00
+	ldi		r16, 255				; NO rollover.
+;
+st2A_skip00:
 	sts		st_tmr2_count, r16
 ;
 	pop		R16

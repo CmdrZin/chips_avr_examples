@@ -9,8 +9,12 @@
  * This service supports four IR 2D04 range sensors.
  * The sensors use power control to help reduce power use which is 35ma per sensor.
  *
+ * Uses PORT A
+ *
  * Dependentcies
  *   sys_timers.asm
+ *   adc_util_triggered.asm
+ *
  */
 
 .equ	RNG_IR_LED_DELAY_COUNT	= 3		; ms..Sensor on time
@@ -22,6 +26,18 @@
 .equ	RNG_IR_WAIT_LEFT_R		= 2
 .equ	RNG_IR_WAIT_RIGHT_F		= 3
 .equ	RNG_IR_WAIT_RIGHT_R		= 4
+
+
+; IR Range uses PORTA.0:7
+.equ	IR_LEFT_FRONT_SIG	= 0
+.equ	IR_LEFT_REAR_SIG	= 1
+.equ	IR_RIGHT_REAR_SIG	= 2
+.equ	IR_RIGHT_FRONT_SIG	= 3
+
+.equ	IR_LEFT_FRONT_CTRL	= PORTA4
+.equ	IR_LEFT_REAR_CTRL	= PORTA5
+.equ	IR_RIGHT_REAR_CTRL	= PORTA6
+.equ	IR_RIGHT_FRONT_CTRL	= PORTA7
 
 
 .DSEG
@@ -52,11 +68,15 @@ range_ir_service_init:
  * Configure IO pins
  */
 range_ir_service_init_io:
-
+	sbi		PORTA, IR_LEFT_FRONT_CTRL
+	sbi		PORTA, IR_LEFT_REAR_CTRL
+	sbi		PORTA, IR_RIGHT_REAR_CTRL
+	sbi		PORTA, IR_RIGHT_FRONT_CTRL
+; Setup ADC for channels 0-3 by adc_init_hdwr()
 	ret
 
 /*
- * range_service()
+ * range_ir_service()
  *
  * input reg:	none
  *
@@ -97,7 +117,7 @@ range_ir_service:
 	lds		R16, range_ir_state		; get state
 ; switch(state)
 	cpi		R16, RNG_IR_WAIT_IDLE
-	brne	rs_skip00
+	brne	ris_skip10
 ; Leave IDLE
 ; Turn ON Left Sensor LED
 ;	cbi		PORTD, RNG_LED_LEFT
@@ -106,12 +126,12 @@ range_ir_service:
 	sts		range_ir_state, R16
 	rjmp	rs_exit
 ;
-rs_skip00:
+ris_skip10:
 	cpi		R16, RNG_IR_WAIT_LEFT_F
-	brne	rs_skip10
+	brne	rs_skip20
 ; Sample Left Det
-;;	ldi		R17, ADC_LEFT_CHAN
-;;	call	adc_trigger				; returns R17.R18..left justified b9:2,b1:0
+	ldi		R17, IR_LEFT_FRONT_SIG
+	call	adc_trigger				; returns R17.R18..left justified b9:2,b1:0
 ; Turn OFF Left Sensor LED
 ;	sbi		PORTD, RNG_LED_LEFT
 ; Turn ON Right Sensor LED
@@ -121,9 +141,9 @@ rs_skip00:
 	sts		range_ir_state, R16
 	rjmp	rs_exit
 ;
-rs_skip10:
+rs_skip20:
 	cpi		R16, RNG_IR_WAIT_RIGHT_F
-	brne	rs_skip20
+	brne	rs_skip30
 ; Sample Right Det
 ;;	ldi		R17, ADC_RIGHT_CHAN
 ;;	call	adc_trigger
@@ -131,7 +151,7 @@ rs_skip10:
 	ldi		R16, RNG_IR_IDLE_DELAY_COUNT
 	sts		range_ir_delay, R16
 ;
-rs_skip20:
+rs_skip30:
 ; set to default
 	ldi		R16, RNG_IR_WAIT_IDLE
 	sts		range_ir_state, R16

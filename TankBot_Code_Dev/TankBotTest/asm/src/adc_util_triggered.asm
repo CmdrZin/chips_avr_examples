@@ -34,18 +34,18 @@ adc_rightL:	.BYTE	1			; store 10 bits as 7:6
  * input reg:	none
  * output reg:	none
  *
- * 8MHz CPU clock.
+ * 20MHz CPU clock.
  * Single Ended
  * Available channels 0,1,2,3
- * ATmega328P has Internal 1.1v reference.
+ * ATmega164P has Internal 2.56v reference.
  *
  * resources:
  */
 adc_init_hdwr:
-	ldi		R16, (1<<REFS1)|(1<<REFS0)|(1<<ADLAR)	; Internal Vref=1.1v, Left Adj
-	sts		ADMUX, R16
+	ldi		R16, (1<<REFS1)|(1<<REFS0)|(1<<ADLAR)	; Internal Vref=2.56v, Left Adj
+	sts		ADMUX, R16								; lower 3 bits select channel.
 ;
-	ldi		R16, (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)	; ADC Enable, CPU/64 clock (8MHz)
+	ldi		R16, (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)	; ADC Enable, CPU/128 clock (20MHz)
 	sts		ADCSRA, R16
 ;
 	ret
@@ -53,24 +53,15 @@ adc_init_hdwr:
 /*
  * Get ADC Data
  *
- * input:	R17 - ADC channel. ADC_LEFT_CHAN, ADC_RIGHT_CHAN
+ * input:	none
  *
- * output reg:	R17 - b7:0 MSBs
- *				R18 - b7:6 LSBs
+ * output:	R17 - b7:0 MSBs
+ *			R18 - b7:6 LSBs
  *
  */
 adc_get_data:
-	cpi		R17, ADC_LEFT_CHAN
-	brne	agd_skip10
-; Get Left
-	lds		R18, adc_leftL
 	lds		R17, adc_leftH
-	rjmp	agd_exit
-;
-agd_skip10:
-; Get Right
-	lds		R18, adc_rightL
-	lds		R17, adc_rightH
+	lds		R18, adc_leftL
 ;
 agd_exit:
 	ret
@@ -81,7 +72,7 @@ agd_exit:
 /*
  * Trigger ADC channel
  *
- * input:	R17 - ADC channel. ADC_LEFT_CHAN, ADC_RIGHT_CHAN
+ * input:	R17 - ADC channel 0-3
  *
  * output:	adc_left		Range data
  *			adc_right		Range data
@@ -89,49 +80,23 @@ agd_exit:
  * NOTE: MUST read ADCL first then ADCH.
  */
 adc_trigger:
-	cpi		R17, ADC_LEFT_CHAN
-	brne	at_skip10
-; Do Left side
-	lds		R16, ADMUX
-	andi	R16, 0xF0
-	ori		R16, ADC_LEFT_CHAN
-	sts		ADMUX, R16
+	lds		r16, ADMUX					; get flags
+	andi	r16, 0xF8					; zero channel select
+	or		r16, r17					; set channel
+	sts		ADMUX, R16					; lower 3 bits select channel.
 ; Trigger
-	lds		R16, ADCSRA
-	ori		R16, (1<<ADSC)
-	sts		ADCSRA, R16
+	lds		r16, ADCSRA
+	ori		r16, (1<<ADSC)
+	sts		ADCSRA, r16
 ; Wait ~125us
 at_loop00:
-	lds		R16, ADCSRA
-	andi	R16, (1<<ADSC)
+	lds		r16, ADCSRA
+	andi	r16, (1<<ADSC)
 	brne	at_loop00
 ; Get Data
-	lds		R18, ADCL			; get 2 LSBs .. d7:6
-	lds		R17, ADCH			; get 8 MSBs .. d7:0..releases ADC data reg.
-	sts		adc_leftL, R18
-	sts		adc_leftH, R17
-	rjmp	at_exit				; EXIT
+	lds		r18, ADCL			; get 2 LSBs .. d7:6
+	lds		r17, ADCH			; get 8 MSBs .. d7:0..releases ADC data reg.
+	sts		adc_leftL, r18
+	sts		adc_leftH, r17
 ;
-at_skip10:
-; Do Right side
-	lds		R16, ADMUX
-	andi	R16, 0xF0
-	ori		R16, ADC_RIGHT_CHAN
-	sts		ADMUX, R16
-; Trigger
-	lds		R16, ADCSRA
-	ori		R16, (1<<ADSC)
-	sts		ADCSRA, R16
-; Wait ~125us
-at_loop10:
-	lds		R16, ADCSRA
-	andi	R16, (1<<ADSC)
-	brne	at_loop10
-; Get Data
-	lds		R18, ADCL			; get 2 LSBs .. d7:6
-	lds		R17, ADCH			; get 8 MSBs .. d7:0..releases ADC data reg.
-	sts		adc_rightL, R18
-	sts		adc_rightH, R17
-;
-at_exit:
 	ret
