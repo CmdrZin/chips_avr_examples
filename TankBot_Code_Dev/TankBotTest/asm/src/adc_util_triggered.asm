@@ -14,19 +14,13 @@
  * Resources;
  * 		adc_buff	4 bytes
  *
- *	NOTE: PORTC shared supports I2C.
+ *	NOTE: PORTA also supports IR power control.
  */ 
-
-; Move to ADC module
-.equ	ADC_LEFT_CHAN	= 0
-.equ	ADC_RIGHT_CHAN	= 1
 
 
 .DSEG
-adc_leftH:	.BYTE	1			; store 10 bits as 7:0..unsigned 10 bits
-adc_leftL:	.BYTE	1			; store 10 bits as 7:6
-adc_rightH:	.BYTE	1			; store 10 bits as 7:0..unsigned 10 bits
-adc_rightL:	.BYTE	1			; store 10 bits as 7:6
+adc_H:		.BYTE	1			; store 10 bits as 7:0..unsigned 10 bits
+adc_L:		.BYTE	1			; store 10 bits as 7:6
 
 .CSEG
 /*
@@ -60,8 +54,8 @@ adc_init_hdwr:
  *
  */
 adc_get_data:
-	lds		R17, adc_leftH
-	lds		R18, adc_leftL
+	lds		R17, adc_H
+	lds		R18, adc_L
 ;
 agd_exit:
 	ret
@@ -74,8 +68,7 @@ agd_exit:
  *
  * input:	R17 - ADC channel 0-3
  *
- * output:	adc_left		Range data
- *			adc_right		Range data
+ * output:	adc_HL		Range data
  *
  * NOTE: MUST read ADCL first then ADCH.
  */
@@ -96,7 +89,7 @@ at_loop00:
 ; Get Data
 	lds		r18, ADCL			; get 2 LSBs .. d7:6
 	lds		r17, ADCH			; get 8 MSBs .. d7:0..releases ADC data reg.
-	sts		adc_leftL, r18
-	sts		adc_leftH, r17
+	sts		adc_L, r18
+	sts		adc_H, r17
 ;
 	ret

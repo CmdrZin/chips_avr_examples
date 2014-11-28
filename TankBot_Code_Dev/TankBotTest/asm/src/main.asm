@@ -53,7 +53,7 @@ RESET:
 	call	adc_init_hdwr
 	call	pwm_dc_init
 ;;	call	tank_demo_init
-;;	call	range_ir_service_init
+	call	range_ir_service_init
 	call	range_s_service_init
 ;
 	sei							; enable intr
@@ -72,15 +72,18 @@ RESET:
 ; TEST--
  */
 ;
+	call	tbtest_leds			; blink LEDs for awhile.
+;
 main_m:
 ;
 ;
 m_skip01:
+	call	tb_ir_range_leds		; use only one of these at a time.
+;;	call	tb_sonar_range_leds
+;
 ;;;	call	tank_demo
 ;
-;	call	tbtest_leds
-;
-;;;	call	range_ir_service
+	call	range_ir_service
 ;
 	call	range_sonar_service
 ;

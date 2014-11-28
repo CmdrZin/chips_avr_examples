@@ -14,8 +14,8 @@
  *   sys_timers.asm
  */
 
-.equ	RNG_S_IDLE_DELAY_COUNT	= 8		; 80ms..Sensor idle scan
-.equ	RNG_S_MAX_WAIT_COUNT	= 4		; 40ms..Maximum ping wait delay
+.equ	RNG_S_IDLE_DELAY_COUNT	= 5		; 50ms..Sensor idle scan
+.equ	RNG_S_MAX_WAIT_COUNT	= 5		; 50ms..Maximum ping wait delay 38ms
 
 .equ	RNG_S_WAIT_IDLE			= 0
 .equ	RNG_S_WAIT_LEFT			= 1
