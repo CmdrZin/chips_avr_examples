@@ -79,7 +79,7 @@ st_init_tmr0:
 
 
 /*
- * Set up Timer1 for PWM at 8us (Servo) or 32us (DC Motor) rate using 20MHz CPU clock
+ * Set up Timer1 for PWM at 8us (Servo) or 52.1us (DC Motor) rate using 20MHz CPU clock
  * Call this once after RESET.
  *
  * PWM use OCR1A and OCR1B interrupt services.

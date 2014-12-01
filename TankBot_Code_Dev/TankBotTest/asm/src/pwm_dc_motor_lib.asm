@@ -16,7 +16,7 @@
  *      1 0		REV
  *      1 1		BREAK
  *
- *    PWM: 10ms period. 8us resolution. 00:0% (OFF)..FF:100% (MaxON)
+ *    PWM: 10ms period. 8us resolution. 00:0% (OFF)..C3:100% (MaxON)
  *
  * PORT D used.
  *
@@ -41,7 +41,7 @@
 ; Timer1 = 51.2us
 ; 128 = 6.55ms..66%
 ; 195 = 10.0ms..100%
-.equ	PWM_R_STOP		=	0
+.equ	PWM_R_STOP		=	0				; Speed constants
 .equ	PWM_R_SLOW		=	PWM_R_STOP+49
 .equ	PWM_R_MED		=	PWM_R_STOP+98
 .equ	PWM_R_FAST		=	PWM_R_STOP+195
@@ -51,7 +51,7 @@
 .equ	PWM_L_MED		=	PWM_L_STOP+98
 .equ	PWM_L_FAST		=	PWM_L_STOP+195
 
-.equ	DIR_FWD			=	0
+.equ	DIR_FWD			=	0				; Direction constants
 .equ	DIR_REV			=	1
 
 
@@ -113,6 +113,7 @@ pwm_dc_init_io:
  * Set PWM RIGHT to STOP
  * Rate is N * 32us for DC Motor control
  *
+ * input:	none
  */
 pwm_stop_right:
 	ldi		R17, PWM_R_STOP
@@ -164,6 +165,7 @@ psrd_skip00:
  * Set PWM LEFT to STOP
  * Rate is N * 32us for DC Motor control
  *
+ * input:	none
  */
 pwm_stop_left:
 	ldi		R17, PWM_L_STOP

@@ -2,7 +2,7 @@
  * I2C Master Module
  *
  * org: 6/22/2014
- * rev: 10/2/2014
+ * rev: 11/29/2014
  * auth: Nels "Chip" Pearson
  *
  * Targets: ATmega164P, ATmega328P
@@ -12,10 +12,20 @@
  *
  */ 
 
-// I2C Rate coefficients
+/* I2C Rate coefficients
+ *
+ * I2C rate = CPU/(16 + 2(TWBR)*(4^TWPS0:1)) = 10^6Hz / 20 = 100kHz
+ *
+ * 20Mhz / 200 = 100kHz .. 16 + (2*92)*1) = 200
+ * 8Mhz  / 80  = 100kHz .. 16 + (2*32)*1) = 80
+ * 1Mhz  / 20  = 50kHz  .. 16 + (2*2)*1)  = 20
+ *
+ */
 .equ	I2C_CPU_CLOCK_20MHZ_TWBR	= 92
 .equ	I2C_CPU_CLOCK_8MHZ_TWBR		= 32
 .equ	I2C_CPU_CLOCK_1MHZ_TWBR		= 2
+;
+.equ	I2C_CPU_CLOCK 				= I2C_CPU_CLOCK_20MHZ_TWBR		; Set as needed for CPU clock
 
 
 // I2C Communications State
@@ -24,34 +34,43 @@
 .equ	I2C_COMM_ERROR	= 2		; Last message sent or received had error(s).
 
 
+// I2C Error Flags
+.equ	I2C_ERROR_OV	= 0x80	; Overflow of receive buffer. Data lost.
+.equ	I2C_ERROR_ARB	= 0x40	; Arbitration lost during message.
+
+
 // Interrupts state machine status values.
-.equ	START = 0x08
-.equ	REPT_START = 0x10		; Repeated START sent..treat as START
-.equ	ARB_LOST = 0x38			; Arbitration Lost..FATAL ERROR
+.equ	START			= 0x08
+.equ	REPT_START		= 0x10	; Repeated START sent..treat as START
+.equ	ARB_LOST		= 0x38	; Arbitration Lost..FATAL ERROR
 
-.equ	MT_SLA_ACK = 0x18		; SLA+W sent, ACK recv'd
-.equ	MT_SLA_NACK = 0x20		; SLA+W sent, NACK recv'd
+.equ	MT_SLA_ACK		= 0x18	; SLA+W sent, ACK recv'd
+.equ	MT_SLA_NACK		= 0x20	; SLA+W sent, NACK recv'd
 
-.equ	MT_DATA_ACK = 0x28		; Data sent, ACK recv'd
-.equ	MT_DATA_NACK = 0x30		; Data sent, NACK recv'd
+.equ	MT_DATA_ACK		= 0x28	; Data sent, ACK recv'd
+.equ	MT_DATA_NACK	= 0x30	; Data sent, NACK recv'd
 
-.equ	MR_SLA_ACK = 0x40		; SLA+R sent, ACK recv'd
-.equ	MR_SLA_NACK = 0x48		; SLA+R sent, NACK recv'd
+.equ	MR_SLA_ACK		= 0x40	; SLA+R sent, ACK recv'd
+.equ	MR_SLA_NACK		= 0x48	; SLA+R sent, NACK recv'd
 
-.equ	MR_DATA_ACK = 0x50		; Data recv'd, ACK recv'd
-.equ	MR_DATA_NACK = 0x58		; Data recv'd, NACK recv'd on last byte?
+.equ	MR_DATA_ACK		= 0x50	; Data recv'd, ACK recv'd
+.equ	MR_DATA_NACK	= 0x58	; Data recv'd, NACK recv'd on last byte?
 
 
 .DSEG
 i2c_slave_adrs:		.BYTE	1	; current Slave Address (non-adjusted)
 i2c_comm_state:		.BYTE	1	; Current Comm State
-								;	0:I2C_COMM_IDLE, 1:I2C_COMM_BUSY, 2:I2C_COMM_ERROR
 i2c_comm_status:	.BYTE	1	; Current Comm Read Status. 0:Empty..N:Bytes read in.
-
 i2c_error:			.BYTE	1	; error flags
-								; Read:		b7:Ov,		b6: ArbLost,	b5: Res,	b4: CksumErr
-								; Write:	b3:Res,		b2: ArbLost,	b1: Res,	b0: CksumErr
 
+
+i2c_XH:				.BYTE	1	; store address pointer to current buffer.
+i2c_XL:				.BYTE	1
+
+i2c_buff_in_max:	.BYTE	1	; maximum input byte count.
+i2c_buff_in_cnt:	.BYTE	1	; current byte count.
+
+i2c_buff_out_cnt:	.BYTE	1	; dec to zero while sending data.
 
 // Resume coding
 .CSEG
@@ -62,14 +81,9 @@ i2c_error:			.BYTE	1	; error flags
  * input reg:	none
  * output reg:	none
  *
- * I2C rate = CPU/(16 + 2(TWBR)*(4^TWPS0:1)) = 1^6Hz / 20 = 100kHz
- * 20Mhz / 200 = 100kHz .. 16 + (2*92)*1) = 200
- * 8Mhz  / 80  = 100kHz .. 16 + (2*32)*1) = 80
- * 1Mhz  / 20  = 50kHz  .. 16 + (2*2)*1)  = 20
- *
  */
 i2c_init_master:
-	ldi		R16, I2C_CPU_CLOCK_20MHZ_TWBR	; Set I2C bit rate
+	ldi		R16, I2C_CPU_CLOCK				; Set I2C bit rate
 	sts		TWBR, R16
 ;
 	ldi		R16, 0							; Prescale TWPS1:0 = 00 .. 4^0 = 1
@@ -88,9 +102,13 @@ i2c_init_master:
 
 
 /*
- * int i2c_checkState()					0: ok, 1: if BUSY, 2: ERROR
+ * int i2c_getState()
  *
+ * input reg:	none
  * output reg: 	R17 = i2c_comm_state
+ *					I2C_COMM_IDLE	No messages being processed.  
+ *					I2C_COMM_BUSY	Sending or receiving a message.  
+ *					I2C_COMM_ERROR	Last message sent or received had error(s).  
  *
  */
 i2c_getState:
@@ -100,37 +118,42 @@ i2c_getState:
 /*
  * int i2c_getErrorFlags()
  *
+ * input reg:	none
  * output reg: 	R17 = i2c_error
+ *					I2C_ERROR_OV	Overflow.  
+ *					I2C_ERROR_ARB	Arbitration lost.  
+ *
  */
 i2c_getErrorFlags:
 	lds		R17, i2c_error
 	ret
 
 /*
- * int i2c_getReadStatus()
+ * int i2c_getStatus()
  *
- * output reg: 	R17 = i2c_comm_status	0: None, 1: Read Message byte count
+ * input reg:	none
+ * output reg: 	R17 = i2c_comm_status
+ *					0	Empty input buffer.
+ *					n	Number of bytes read in.
  *
  */
-i2c_getReadStatus:
+i2c_getStatus:
 	lds		R17, i2c_comm_status
 	ret
 
 /*
  * Master has control of data transmissions.
- * int i2c_write( SlaveAdrs, *buffer, byteCount )
- * return: 0:ok, 1:if BUSY, 2:ERROR
+ * int i2c_write( R17=SlaveAdrs, X=*buffer, R18=byteCount )
  *
- * Buffer data: SLA_W, Data, ...
- * byteCount is total size of buffer.
+ * Buffer data: Data, ...
  *
  * input reg:	R17 - Slave Address
  *				X - buffer
- *				R18 - byteCount
+ *				R18 - byteCount expected
  *
  * output reg: 	R17 - results of call (not of message)
  *
- * resources:	R16, X
+ * return:		0:ok, 1:if BUSY, 2:ERROR
  *
  */
 i2c_write:
@@ -163,18 +186,17 @@ iw_skip00:
 
 /*
  * Master has control of data transmissions.
- * int i2c_read( SlaveAdrs, *buffer, maxByteCount )
- * return: 0:ok, 1:if BUSY, 2:ERROR
+ * int i2c_read( R17=SlaveAdrs, X=*buffer, R18=maxByteCount )
  *
- * Buffer data: Data
+ * Buffer data: Data, ...
  *
  * input reg:	R17 - Slave Address
  *				X - buffer
- *				R18 - byteCount
+ *				R18 - maxByteCount expected
  *
  * output reg: 	R17 - results of call (not of message)
  *
- * resources:	R16 (R16)
+ * return: 0:ok, 1:if BUSY, 2:ERROR
  *
  */
 i2c_read:
@@ -205,36 +227,12 @@ ir_skip00:
 	clr		R17
 	ret
 
-
-/*
- * I2C interrupt service
- * 
- * resources: i2c_buff - data buffer
- *
- */
-// Define a data buffer.
-.equ	I2C_BUFF_IN_SIZE	= 18		; read Slave data into here.
-.equ	I2C_BUFF_OUT_SIZE	= 18		; write Slave data from here.
-;
-.DSEG
-i2c_XH:				.BYTE	1
-i2c_XL:				.BYTE	1
-;
-i2c_buff_in_max:	.BYTE	1					; maximum input byte count.
-i2c_buff_in_cnt:	.BYTE	1
-i2c_buff_in:		.BYTE	I2C_BUFF_IN_SIZE	; dec to zero while receiving data
-;
-i2c_buff_out_cnt:	.BYTE	1					; dec to zero while sending data.
-i2c_buff_out:		.BYTE	I2C_BUFF_OUT_SIZE
-
-.CSEG
 /*
  * I2C Interrupt Service
  * Supports both Write to Slave and Read from Slave
- * input reg:
- * output reg:
  *
- * Clear TWCR.TWINT by setting it to 1.
+ * Stack Use: 5
+ *
  */
 ii_skip40:
 	rjmp	ii_skip40e
@@ -291,14 +289,17 @@ ii_skip10:
 ; Get formatted SLA_x address to output. Same START is used for WRITE and READ.
 ; no need to check state
 	lds		R16, i2c_slave_adrs
-	sts		TWDR, R16				; load SLA_W or SLA_R adrs
+	sts		TWDR, R16					; load SLA_W or SLA_R adrs
 	ldi		R16, (1<<TWEN)|(1<<TWIE)|(1<<TWINT)
-	sts		TWCR, R16				; trigger to send adrs
+	sts		TWCR, R16					; trigger to send adrs
 	rjmp	ii_exit
 ;
 ii_skip20:
+; SLA+W sent, NACK recv'd
+	call	tb_led3_on
+;
 ; Adrs sent, NACK recv'd..ERROR
-	ldi		R16, 0xFF				; ARB ERROR CODE
+	ldi		R16, I2C_ERROR_ARB			; ARB ERROR CODE
 	sts		i2c_error, R16
 	rjmp	ii_reset_intr
 ;
@@ -311,6 +312,9 @@ ii_skip38:
 ; *** WRITE OPERATIONS ***
 ii_skip18:
 ; SLA+W sent, ACK recv'd
+;
+	call	tb_led2_on
+;
 ii_skip28:
 ; Last Data sent, ACK recv'd
 ; Any data to send?
@@ -330,7 +334,7 @@ ii_skip28:
 	sts		i2c_XH, XH
 ;
 	ldi		R16, (1<<TWEN)|(1<<TWIE)|(1<<TWINT)
-	sts		TWCR, R16				; trigger to send data
+	sts		TWCR, R16					; trigger to send data
 ;
 	rjmp	ii_exit
 ;
@@ -349,19 +353,19 @@ ii_skip29:
 ;
 ii_skip30:
 ; Data sent, NACK recv'd..ERROR
-	rjmp	ii_reset_intr					; ERROR..NACK adrs
+	rjmp	ii_reset_intr				; ERROR..NACK adrs
 ;
 ; *** READ OPERATIONS ***
 ii_skip40e:
 ; SLA+R sent, ACK recv'd
 ; reset count
 	clr		R16
-	sts		i2c_buff_in_cnt, R16	; clear input count
-	sts		i2c_comm_status, R16	; clear status
+	sts		i2c_buff_in_cnt, R16		; clear input count
+	sts		i2c_comm_status, R16		; clear status
 ; any space?
 	lds		R16, i2c_buff_in_max
 	tst		R16
-	brne	ii_skip41				; yes
+	brne	ii_skip41					; yes
 ; no
 	ldi		R16, (1<<TWEN)|(1<<TWIE)|(1<<TWINT)	; NACK next send
 	sts		TWCR, R16
@@ -374,9 +378,9 @@ ii_skip41:
 ;
 ii_skip48e:
 ; SLA+R sent, NACK recv'd
-	ldi		R16, 0xFF						; ARB ERROR CODE
+	ldi		R16, I2C_ERROR_ARB			; ARB ERROR CODE
 	sts		i2c_error, R16
-	rjmp	ii_reset_intr					; ERROR..NACK adrs
+	rjmp	ii_reset_intr				; ERROR..NACK adrs
 ;
 ii_skip50e:
 ; Data recv'd, ACK sent
@@ -390,9 +394,9 @@ ii_skip50e:
 	inc		R16
 	sts		i2c_buff_in_cnt, R16
 	lds		R17, i2c_buff_in_max
-	dec		R17								; adj to last byte
+	dec		R17							; adj to last byte
 	cp		R17, R16
-	brlt	ii_skip51						; Overflow..NACK
+	brlt	ii_skip51					; Overflow..NACK
 ; update pointer
 	sts		i2c_XL, XL
 	sts		i2c_XH, XH
@@ -402,6 +406,10 @@ ii_skip50e:
 	rjmp	ii_exit
 ;
 ii_skip51:
+// Overflow error
+	ldi		r16, I2C_ERROR_OV
+	sts		i2c_error, r16
+;
 	ldi		R16, (1<<TWEN)|(1<<TWIE)|(1<<TWINT)	; NACK next send
 	sts		TWCR, R16
 	rjmp	ii_exit

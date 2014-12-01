@@ -155,6 +155,9 @@ rss_skip00:
 	rjmp	rss_exit
 ;
 rss_skip10:
+;
+	call	tb_led4_on
+;
 	cpi		r16, RNG_S_WAIT_LEFT
 	brne	rss_skip20
 ; Record LEFT..Counter is limited to 255 max distance.
@@ -177,6 +180,9 @@ rss_skip10:
 	rjmp	rss_exit
 ;
 rss_skip20:
+;
+	call	tb_led4_off
+;
 	cpi		r16, RNG_S_WAIT_CENTER
 	brne	rss_skip30
 ; Record CENTER..Counter is limited to 255 max distance.

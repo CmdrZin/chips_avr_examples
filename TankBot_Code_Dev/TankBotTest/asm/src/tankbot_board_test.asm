@@ -11,6 +11,86 @@
  *
  */
 
+.DSEG
+tb_delay:		.BYTE	1
+tb_buffer:		.BYTE	4
+
+.CSEG
+
+tb_led1_on:
+	sbi		PORTD, PWM_B2_LEFT				; D2 ON
+	ret
+
+tb_led1_off:
+	cbi		PORTD, PWM_B2_LEFT				; D2 OFF
+	ret
+
+tb_led2_on:
+	sbi		PORTD, PWM_B1_LEFT				; D3 ON
+	ret
+
+tb_led2_off:
+	cbi		PORTD, PWM_B1_LEFT				; D3 OFF
+	ret
+
+tb_led3_on:
+	sbi		PORTD, PWM_A1_RIGHT				; D4 ON
+	ret
+
+tb_led3_off:
+	cbi		PORTD, PWM_A1_RIGHT				; D4 OFF
+	ret
+
+tb_led4_on:
+	sbi		PORTD, PWM_A2_RIGHT				; D5 ON
+	ret
+
+tb_led4_off:
+	cbi		PORTD, PWM_A2_RIGHT				; D5 OFF
+	ret
+
+/*
+ * Test logger out to I2C Slave
+ *
+ */
+tb_logger:
+	sbis	GPIOR0, DEMO_10MS_TIC		; test 10ms tic
+	ret									; EXIT..not set
+;
+	cbi		GPIOR0, DEMO_10MS_TIC		; clear tic10ms flag set by interrupt
+; check delay
+	lds		r16, tb_delay
+	dec		r16
+	sts		tb_delay, r16
+	breq	tbl_skip00
+	ret									; EXIT..not time
+tbl_skip00:
+	ldi		r16, 10
+	sts		range_s_delay, r16
+; Send a message
+	call	tb_led1_on
+;
+	call	logger_clear_buffer
+	ldi		ZL, LOW(TANK_BOT_ALIVE)
+	ldi		ZH, HIGH(TANK_BOT_ALIVE)
+	call	logger_append_flash_text
+	ldi		ZL, LOW(LOG_TEXT_SPACE)
+	ldi		ZH, HIGH(LOG_TEXT_SPACE)
+	call	logger_append_flash_text
+	ldi		r16, 'Z'
+	sts		tb_buffer, r16
+	ldi		ZL, LOW(tb_buffer)
+	ldi		ZH, HIGH(tb_buffer)
+	ldi		r17, 1
+	call	logger_append_sram_text
+	ldi		ZL, LOW(LOG_TEXT_SPACE)
+	ldi		ZH, HIGH(LOG_TEXT_SPACE)
+	call	logger_append_flash_text
+	ldi		r17, 0x86
+	call	logger_append_byte_text
+	call	logger_send
+	ret
+
 
 /*
  * Display IR range limit on LEDs
@@ -103,7 +183,7 @@ tbtest_leds:
 	sbi		PORTD, PWM_B2_LEFT
 	sbi		PORTD, PWM_B1_LEFT
 ;
-	clr		r4
+	ldi		r16, 20
 tbl_mloop:
 ;
 tbl_loop00:
@@ -148,7 +228,11 @@ tbl_loop13:
 	cbi		GPIOR0, DEMO_10MS_TIC		; clear tic10ms flag set by interrup
 	cbi		PORTD, PWM_B1_LEFT
 ;
-	dec		r4
+	dec		r16
 	brne	tbl_mloop
 ;
+	cbi		PORTD, PWM_A2_RIGHT
+	cbi		PORTD, PWM_A1_RIGHT
+	cbi		PORTD, PWM_B2_LEFT
+	cbi		PORTD, PWM_B1_LEFT
 	ret

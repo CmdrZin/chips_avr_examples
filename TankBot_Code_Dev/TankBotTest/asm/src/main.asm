@@ -15,22 +15,25 @@
 
 
 .ORG	$0000
-		rjmp	RESET
+	rjmp	RESET
 
 .ORG	PCI2addr				; 0x0c Pin Change Interrupt Request 2
-		rjmp	range_s_intr
+	rjmp	range_s_intr
 
 .ORG	OC2Aaddr				; 0x12 Timer/Counter2 Compare Match A
-		rjmp	st_tmr2A_intr
+	rjmp	st_tmr2A_intr
 
 .ORG	OC1Aaddr				; 0x16 Timer/Counter1 Compare Match A
-		rjmp	pwm_tmr1A_intr
+	rjmp	pwm_tmr1A_intr
 
 .ORG	OC1Baddr				; 0x18 Timer/Counter1 Compare Match B
-		rjmp	pwm_tmr1B_intr
+	rjmp	pwm_tmr1B_intr
 
-.ORG	OC0Aaddr
-		rjmp	st_tmr0_intr	; TMR0 counter compare intr
+.ORG	OC0Aaddr				; 0x20 Timer/Counter0 Compare Match A
+	rjmp	st_tmr0_intr
+
+.ORG	TWIaddr					; 0x34 2-wire Serial Interface
+	rjmp	i2c_intr
 
 
 .ORG	INT_VECTORS_SIZE		; Skip over the rest of them.
@@ -55,22 +58,9 @@ RESET:
 ;;	call	tank_demo_init
 	call	range_ir_service_init
 	call	range_s_service_init
+	call	i2c_init_master
 ;
 	sei							; enable intr
-;
-; TEST++
-/*
-	ldi		r17, DIR_FWD
-	call	pwm_set_right_dir
-	ldi		r17, PWM_R_SLOW
-	call	pwm_set_right
-;
-	ldi		r17, DIR_FWD
-	call	pwm_set_left_dir
-	ldi		r17, PWM_L_MED
-	call	pwm_set_left
-; TEST--
- */
 ;
 	call	tbtest_leds			; blink LEDs for awhile.
 ;
@@ -78,14 +68,17 @@ main_m:
 ;
 ;
 m_skip01:
-	call	tb_ir_range_leds		; use only one of these at a time.
+;;	call	tb_ir_range_leds		; use only one of these at a time. NOT with demo. Messes up PWM.
 ;;	call	tb_sonar_range_leds
+;
+	call	tb_logger				; Output a test message every 100ms.
 ;
 ;;;	call	tank_demo
 ;
 	call	range_ir_service
 ;
 	call	range_sonar_service
+;
 ;
 	rjmp	main_m
 
@@ -107,3 +100,6 @@ m_skip01:
 .include "conversion_util.asm"
 // Board Test
 .include "tankbot_board_test.asm"
+// I2C Master Support
+.include "i2c_master.asm"
+

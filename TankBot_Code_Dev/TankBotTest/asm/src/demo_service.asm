@@ -7,8 +7,10 @@
  * Target: Tank Bot Demo Board, 20MHz, ATmega164P. Tank Bot
  *
  * Dependentcies
- *   pwm_dc_motor_lib.asm
- *   sys_timers.asm
+ *   pwm_dc_motor_lib
+ *   sys_timers
+ *   range_ir_service
+ *   range_sonar_service
  */
 
 .equ	DEMO_DELAY_COUNT	= 1		; 10msec
@@ -25,7 +27,7 @@
 .equ	DEMO_AVOID_FWD		= 0		; go forward
 .equ	DEMO_AVOID_CONTINUE	= 1		; continue forward
 .equ	DEMO_AVOID_BACKUP	= 2		; go reverse
-.equ	DEMO_AVOID_TURN180	= 3		; go forward
+.equ	DEMO_AVOID_TURN180	= 3		; spin in place
 
 
 .DSEG
@@ -46,40 +48,6 @@ tank_demo_init:
 ;
 	ret
 
-/* Sonar display test code.
- *
-m_skip10:
-	lds		r16, range_s_left
-	cpi		r16, 50
-	brge	m_skip11
-	cbi		PORTD, PWM_A2_RIGHT
-	rjmp	m_skip20
-m_skip11:
-	sbi		PORTD, PWM_A2_RIGHT
-;
-m_skip20:
-	lds		r16, range_s_center
-	cpi		r16, 50
-	brge	m_skip21
-	cbi		PORTD, PWM_A1_RIGHT
-	rjmp	m_skip30
-m_skip21:
-	sbi		PORTD, PWM_A1_RIGHT
-;
-m_skip30:
-	lds		r16, range_s_right
-	cpi		r16, 50
-	brge	m_skip31
-	cbi		PORTD, PWM_B1_LEFT
-	rjmp	m_skip40
-m_skip31:
-	sbi		PORTD, PWM_B1_LEFT
-;
-m_skip40:
- *
- */
-
-
 
 /*
  * Some simple state machines to demonstrate to system.
@@ -89,17 +57,7 @@ tank_demo:
 	ret									; EXIT..not set
 ;
 	cbi		GPIOR0, DEMO_10MS_TIC		; clear tic10ms flag set by interrup
-; check delay
-	lds		R16, demo_delay
-	dec		R16
-	sts		demo_delay, R16
-	breq	sd_skip00
-	ret									; EXIT..not time
-;
-sd_skip00:
-	ldi		R16, DEMO_DELAY_COUNT		; reset
-	sts		demo_delay, R16
-// Run service
+// Run service every 10ms
 ; Get MODE
 	lds		R16, demo_mode
 ; switch(mode)
@@ -118,19 +76,20 @@ sd_skip00:
 	rjmp	sd_exit						; no
 sd_skip001:
 ; Go forward
+	ldi		R17, DIR_FWD
+	call	pwm_set_right_dir
+	call	pwm_set_left_dir
+; at medium speed
 	ldi		R17, PWM_R_MED
-;;;	ldi		R17, PWM_R_MED			; run backwards
 	call	pwm_set_right
-
 	ldi		R17, PWM_L_MED
-;;;	ldi		R17, PWM_L_MED			; run backwards
 	call	pwm_set_left
 ;
 	ldi		R16, 200
 	sts		demo_s_time, R16			; run for 2 sec
 ;
 	ldi		R16, DEMO_SQUARE_TURN90
-	sts		demo_state, R16					; next state
+	sts		demo_state, R16				; next state
 	rjmp	sd_exit
 ;
 sd_skip010:
@@ -144,9 +103,10 @@ sd_skip010:
 	rjmp	sd_exit						; no
 ; yes
 sd_skip011:
+; Turn Left
 	call	pwm_stop_left
 ;
-	ldi		R16, 105
+	ldi		R16, 105					; Tune this to turn 90 degrees
 	sts		demo_s_time, R16			; run for 2 sec
 ;
 	ldi		R16, DEMO_SQUARE_FWD
@@ -183,33 +143,41 @@ sd_skip21:
 ;
 sd_skip201:
 ; Go forward
+	ldi		R17, DIR_FWD
+	call	pwm_set_right_dir
+	call	pwm_set_left_dir
+; at medium speed
 	ldi		R17, PWM_R_MED
 	call	pwm_set_right
-
 	ldi		R17, PWM_L_MED
 	call	pwm_set_left
 ;
 	ldi		R16, DEMO_AVOID_CONTINUE
-	sts		demo_state, R16					; next state
+	sts		demo_state, R16				; next state
 	rjmp	sd_exit
 ;
 sd_skip210:
 	cpi		R16, DEMO_AVOID_CONTINUE
 	brne	sd_skip220
 ; Check detectors..ALL must be zero
-
+	call	obstical_check
+	tst		r17							; 0: no obsticals
 	brne	sd_skip211
-	rjmp	sd_exit					; ok to continue
-; Detected BLACK
+	rjmp	sd_exit						; ok to continue
+; Obstical detected
 sd_skip211:
-; Backup
-	ldi		R17, PWM_R_MED
-	call	pwm_set_right
-	ldi		R17, PWM_L_MED
+; Backup at SLOW speed
+	ldi		R17, PWM_L_SLOW
 	call	pwm_set_left
+	ldi		R17, PWM_R_SLOW
+	call	pwm_set_right
 ;
-	ldi		R16, 30
-	sts		demo_s_time, R16		; run for 1 sec
+	ldi		R17, DIR_REV
+	call	pwm_set_right_dir
+	call	pwm_set_left_dir
+;
+	ldi		R16, 60
+	sts		demo_s_time, R16		; run for 600ms
 ;
 	ldi		R16, DEMO_AVOID_BACKUP	; start back up and turn around
 	sts		demo_state, R16			; next state
@@ -224,14 +192,11 @@ sd_skip220:
 	sts		demo_s_time, R16		; update
 	brne	sd_exit					; no
 ; Turn around
-	ldi		R17, PWM_R_MED
-	call	pwm_set_right
-
-	ldi		R17, PWM_L_MED
-	call	pwm_set_left
+	ldi		R17, DIR_FWD
+	call	pwm_set_right_dir
 ;
-	ldi		R16, 105
-	sts		demo_s_time, R16		; run for 1 sec
+	ldi		R16, 105				; tune for 180 degree turn
+	sts		demo_s_time, R16
 ;
 	ldi		R16, DEMO_AVOID_FWD
 	sts		demo_state, R16			; next state
@@ -245,6 +210,42 @@ sd_skip230:
 sd_skip30:
 	call	pwm_stop_left
 	call	pwm_stop_right
-;
+; ERROR
 sd_exit:
 	ret
+
+
+/*
+ * Obstical Check
+ *
+ * Chech all Sonar range sensors for minimum return ranges.
+ *
+ * output:	R17		0: Clear .. 1:Obstical
+ *
+ */
+obstical_check:
+	lds		r16, range_s_left
+	cpi		r16, SONAR_LIMIT
+	brge	oc_skip10
+	rjmp	oc_block_exit
+;
+oc_skip10:
+	lds		r16, range_s_center
+	cpi		r16, SONAR_LIMIT
+	brge	oc_skip20
+	rjmp	oc_block_exit
+;
+oc_skip20:
+	lds		r16, range_s_right
+	cpi		r16, SONAR_LIMIT
+	brge	oc_skip30
+	rjmp	oc_block_exit
+;
+oc_skip30:
+	clr		r17						; no obsticals
+	ret
+;
+oc_block_exit:
+	ldi		r17, 1					; obstical detected
+	ret
+

@@ -58,6 +58,7 @@ bin8hex:
  *   X[1].X[0]<-r17
  *   r16 used as test buffer.
  *
+ * NOTE: NOT TESTED YET.
  */
 bin8dec:
 	push	r16
