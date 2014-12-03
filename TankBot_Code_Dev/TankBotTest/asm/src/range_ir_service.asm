@@ -17,8 +17,8 @@
  *
  */
 
-.equ	RNG_IR_LED_DELAY_COUNT	= 3		; 30ms..Sensor on time
-.equ	RNG_IR_IDLE_DELAY_COUNT	= 8		; 80ms..scan delay
+.equ	RNG_IR_LED_DELAY_COUNT	= 6		; 38.6 +/-9.6 + 5 ~=60ms..Sensor on time
+.equ	RNG_IR_IDLE_DELAY_COUNT	= 7		; 70ms..scan delay
 
 
 .equ	RNG_IR_WAIT_IDLE		= 0
@@ -116,7 +116,7 @@ range_ir_service:
 	dec		R16
 	sts		range_ir_delay, R16
 	breq	ris_skip00
-	rjmp	rs_exit
+	rjmp	ris_exit
 ris_skip00:
 ; Run Service
 	lds		R16, range_ir_state			; get state
@@ -132,11 +132,11 @@ ris_skip00:
 ; next state
 	ldi		R16, RNG_IR_WAIT_LEFT_F
 	sts		range_ir_state, R16
-	rjmp	rs_exit
+	rjmp	ris_exit
 ;
 ris_skip10:
 	cpi		R16, RNG_IR_WAIT_LEFT_F
-	brne	rs_skip20
+	brne	ris_skip20
 ; Sample Left Front Range
 	ldi		R17, IR_LEFT_FRONT_SIG
 	call	adc_trigger					; returns R17.R18..left justified b9:2,b1:0
@@ -151,11 +151,11 @@ ris_skip10:
 ; next state
 	ldi		R16, RNG_IR_WAIT_LEFT_R
 	sts		range_ir_state, R16
-	rjmp	rs_exit
+	rjmp	ris_exit
 ;
-rs_skip20:
+ris_skip20:
 	cpi		R16, RNG_IR_WAIT_LEFT_R
-	brne	rs_skip30
+	brne	ris_skip30
 ; Sample Left Front Range
 	ldi		R17, IR_LEFT_REAR_SIG
 	call	adc_trigger					; returns R17.R18..left justified b9:2,b1:0
@@ -170,11 +170,11 @@ rs_skip20:
 ; next state
 	ldi		R16, RNG_IR_WAIT_RIGHT_F
 	sts		range_ir_state, R16
-	rjmp	rs_exit
+	rjmp	ris_exit
 ;
-rs_skip30:
+ris_skip30:
 	cpi		R16, RNG_IR_WAIT_RIGHT_F
-	brne	rs_skip40
+	brne	ris_skip40
 ; Sample Right Front Range
 	ldi		R17, IR_RIGHT_FRONT_SIG
 	call	adc_trigger					; returns R17.R18..left justified b9:2,b1:0
@@ -189,11 +189,11 @@ rs_skip30:
 ; next state
 	ldi		R16, RNG_IR_WAIT_RIGHT_R
 	sts		range_ir_state, R16
-	rjmp	rs_exit
+	rjmp	ris_exit
 ;
-rs_skip40:
+ris_skip40:
 	cpi		R16, RNG_IR_WAIT_RIGHT_R
-	brne	rs_skip50
+	brne	ris_skip50
 ; Sample Right Rear Range
 	ldi		R17, IR_RIGHT_REAR_SIG
 	call	adc_trigger					; returns R17.R18..left justified b9:2,b1:0
@@ -206,11 +206,11 @@ rs_skip40:
 ; next state
 	ldi		R16, RNG_IR_WAIT_IDLE
 	sts		range_ir_state, R16
-	rjmp	rs_exit
+	rjmp	ris_exit
 ;
-rs_skip50:
+ris_skip50:
 ; set to default
 	ldi		R16, RNG_IR_WAIT_IDLE
 	sts		range_ir_state, R16
-rs_exit:
+ris_exit:
 	ret

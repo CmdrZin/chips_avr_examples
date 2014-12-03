@@ -16,25 +16,72 @@
 
 .ORG	$0000
 	rjmp	RESET
+.ORG	$0002
+	rjmp	trap_intr
+.ORG	$0004
+	rjmp	trap_intr
+.ORG	$0006
+	rjmp	trap_intr
+.ORG	$0008
+	rjmp	trap_intr
+.ORG	$000A
+	rjmp	trap_intr
 
 .ORG	PCI2addr				; 0x0c Pin Change Interrupt Request 2
 	rjmp	range_s_intr
+.ORG	$000E
+	rjmp	trap_intr
+.ORG	$0010
+	rjmp	trap_intr
 
 .ORG	OC2Aaddr				; 0x12 Timer/Counter2 Compare Match A
 	rjmp	st_tmr2A_intr
+.ORG	$0014
+	rjmp	trap_intr
+.ORG	$0016
+	rjmp	trap_intr
+.ORG	$0018
+	rjmp	trap_intr
 
-.ORG	OC1Aaddr				; 0x16 Timer/Counter1 Compare Match A
+.ORG	OC1Aaddr				; 0x1a Timer/Counter1 Compare Match A
 	rjmp	pwm_tmr1A_intr
 
-.ORG	OC1Baddr				; 0x18 Timer/Counter1 Compare Match B
+.ORG	OC1Baddr				; 0x1c Timer/Counter1 Compare Match B
 	rjmp	pwm_tmr1B_intr
+.ORG	$001E
+	rjmp	trap_intr
 
 .ORG	OC0Aaddr				; 0x20 Timer/Counter0 Compare Match A
 	rjmp	st_tmr0_intr
+.ORG	$0022
+	rjmp	trap_intr
+.ORG	$0024
+	rjmp	trap_intr
+.ORG	$0026
+	rjmp	trap_intr
+.ORG	$0028
+	rjmp	trap_intr
+.ORG	$002A
+	rjmp	trap_intr
+.ORG	$002C
+	rjmp	trap_intr
+.ORG	$002E
+	rjmp	trap_intr
+.ORG	$0030
+	rjmp	trap_intr
+.ORG	$0032
+	rjmp	trap_intr
 
 .ORG	TWIaddr					; 0x34 2-wire Serial Interface
 	rjmp	i2c_intr
-
+.ORG	$0036
+	rjmp	trap_intr
+.ORG	$0038
+	rjmp	trap_intr
+.ORG	$003A
+	rjmp	trap_intr
+.ORG	$003C
+	rjmp	trap_intr
 
 .ORG	INT_VECTORS_SIZE		; Skip over the rest of them.
 
@@ -66,9 +113,9 @@ RESET:
 ;
 main_m:
 ;
-;
 m_skip01:
-;;	call	tb_ir_range_leds		; use only one of these at a time. NOT with demo. Messes up PWM.
+; use only one of these at a time. NOT with demo. Messes up PWM.
+;;	call	tb_ir_range_leds
 ;;	call	tb_sonar_range_leds
 ;
 	call	tb_logger				; Output a test message every 100ms.
@@ -81,6 +128,10 @@ m_skip01:
 ;
 ;
 	rjmp	main_m
+
+trap_intr:
+	call	tb_led3_on
+	rjmp	trap_intr
 
 // Bring in timmer support
 .include "sys_timers.asm"

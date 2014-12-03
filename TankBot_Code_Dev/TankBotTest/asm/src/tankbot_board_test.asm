@@ -14,6 +14,8 @@
 .DSEG
 tb_delay:		.BYTE	1
 tb_buffer:		.BYTE	4
+tb_count:		.BYTE	1
+
 
 .CSEG
 
@@ -65,33 +67,100 @@ tb_logger:
 	breq	tbl_skip00
 	ret									; EXIT..not time
 tbl_skip00:
-	ldi		r16, 10
-	sts		range_s_delay, r16
+	ldi		r16, 205
+	sts		tb_delay, r16
 ; Send a message
-	call	tb_led1_on
-;
 	call	logger_clear_buffer
 	ldi		ZL, LOW(TANK_BOT_ALIVE)
 	ldi		ZH, HIGH(TANK_BOT_ALIVE)
 	call	logger_append_flash_text
+;
+;	ldi		ZL, LOW(LOG_TEXT_SPACE)
+;	ldi		ZH, HIGH(LOG_TEXT_SPACE)
+;	call	logger_append_flash_text
+;
+;	ldi		r16, 'Z'
+;	sts		tb_buffer, r16
+;	ldi		ZL, LOW(tb_buffer)
+;	ldi		ZH, HIGH(tb_buffer)
+;	ldi		r17, 1
+;	call	logger_append_sram_text
+;
 	ldi		ZL, LOW(LOG_TEXT_SPACE)
 	ldi		ZH, HIGH(LOG_TEXT_SPACE)
 	call	logger_append_flash_text
-	ldi		r16, 'Z'
-	sts		tb_buffer, r16
-	ldi		ZL, LOW(tb_buffer)
-	ldi		ZH, HIGH(tb_buffer)
-	ldi		r17, 1
-	call	logger_append_sram_text
-	ldi		ZL, LOW(LOG_TEXT_SPACE)
-	ldi		ZH, HIGH(LOG_TEXT_SPACE)
-	call	logger_append_flash_text
-	ldi		r17, 0x86
+;
+	lds		r16, tb_count
+	andi	r16, 0x03				; limit range to 0-3
+; switch(tb_count)
+	cpi		r16, 0
+	brne	tl_skip10
+; Left Front
+	mov		r17, r16
 	call	logger_append_byte_text
+;
+	ldi		ZL, LOW(LOG_TEXT_SPACE)
+	ldi		ZH, HIGH(LOG_TEXT_SPACE)
+	call	logger_append_flash_text
+;
+	lds		r17, range_ir_leftFront
+	call	logger_append_byte_text
+;
+	rjmp	tl_exit
+;
+tl_skip10:
+	cpi		r16, 1
+	brne	tl_skip20
+; Left Rear
+	mov		r17, r16
+	call	logger_append_byte_text
+;
+	ldi		ZL, LOW(LOG_TEXT_SPACE)
+	ldi		ZH, HIGH(LOG_TEXT_SPACE)
+	call	logger_append_flash_text
+;
+	lds		r17, range_ir_leftRear
+	call	logger_append_byte_text
+;
+	rjmp	tl_exit
+;
+tl_skip20:
+	cpi		r16, 2
+	brne	tl_skip30
+; Right Rear
+	mov		r17, r16
+	call	logger_append_byte_text
+;
+	ldi		ZL, LOW(LOG_TEXT_SPACE)
+	ldi		ZH, HIGH(LOG_TEXT_SPACE)
+	call	logger_append_flash_text
+;
+	lds		r17, range_ir_rightRear
+	call	logger_append_byte_text
+;
+	rjmp	tl_exit
+;
+tl_skip30:
+; Right Front
+	mov		r17, r16
+	call	logger_append_byte_text
+;
+	ldi		ZL, LOW(LOG_TEXT_SPACE)
+	ldi		ZH, HIGH(LOG_TEXT_SPACE)
+	call	logger_append_flash_text
+;
+	lds		r17, range_ir_rightFront
+	call	logger_append_byte_text
+;
+tl_exit:
+	lds		r16, tb_count
+	inc		r16
+	sts		tb_count, r16
+;
 	call	logger_send
 	ret
 
-
+.equ	IR_LIMIT = 0x80		; ~10cm
 /*
  * Display IR range limit on LEDs
  * Do not uses with tb_sonar_range_leds
@@ -99,39 +168,39 @@ tbl_skip00:
  */
 tb_ir_range_leds:
 	lds		r16, range_ir_leftFront
-	cpi		r16, 0x80
-	brge	tirl_skip01
-	sbi		PORTD, PWM_A1_RIGHT				; ON
+	cpi		r16, IR_LIMIT
+	brlo	tirl_skip01				; unsigned test <
+	call	tb_led1_on
 	rjmp	tirl_skip10
 tirl_skip01:
-	cbi		PORTD, PWM_A1_RIGHT				; OFF
+	call	tb_led1_off
 ;
 tirl_skip10:
 	lds		r16, range_ir_leftRear
-	cpi		r16, 0x80
-	brge	tirl_skip11
-	sbi		PORTD, PWM_A2_RIGHT				; ON
+	cpi		r16, IR_LIMIT
+	brlo	tirl_skip11
+	call	tb_led2_on
 	rjmp	tirl_skip20
 tirl_skip11:
-	cbi		PORTD, PWM_A2_RIGHT				; OFF
+	call	tb_led2_off
 ;
 tirl_skip20:
 	lds		r16, range_ir_rightFront
-	cpi		r16, 0x80
-	brge	tirl_skip21
-	sbi		PORTD, PWM_B1_LEFT				; ON
+	cpi		r16, IR_LIMIT
+	brlo	tirl_skip21
+	call	tb_led3_on
 	rjmp	tirl_skip30
 tirl_skip21:
-	cbi		PORTD, PWM_B1_LEFT				; OFF
+	call	tb_led3_off
 ;
 tirl_skip30:
 	lds		r16, range_ir_rightRear
-	cpi		r16, 0x80
-	brge	tirl_skip31
-	sbi		PORTD, PWM_B2_LEFT				; ON
+	cpi		r16, IR_LIMIT
+	brlo	tirl_skip31
+	call	tb_led4_on
 	rjmp	tirl_skip40
 tirl_skip31:
-	cbi		PORTD, PWM_B2_LEFT				; OFF
+	call	tb_led4_off
 ;
 tirl_skip40:
 	ret

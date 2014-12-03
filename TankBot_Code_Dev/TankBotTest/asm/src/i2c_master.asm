@@ -296,7 +296,7 @@ ii_skip10:
 ;
 ii_skip20:
 ; SLA+W sent, NACK recv'd
-	call	tb_led3_on
+;;	call	tb_led3_on
 ;
 ; Adrs sent, NACK recv'd..ERROR
 	ldi		R16, I2C_ERROR_ARB			; ARB ERROR CODE
@@ -313,7 +313,7 @@ ii_skip38:
 ii_skip18:
 ; SLA+W sent, ACK recv'd
 ;
-	call	tb_led2_on
+;;	call	tb_led2_on
 ;
 ii_skip28:
 ; Last Data sent, ACK recv'd
