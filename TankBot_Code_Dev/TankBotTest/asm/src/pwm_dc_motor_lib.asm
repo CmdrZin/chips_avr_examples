@@ -38,17 +38,19 @@
 .equ	PWM_FLAG_RIGHT	=	0x01
 .equ	PWM_FLAG_LEFT	=	0x02
 
+.equ	PWM_STBY		=	PORTB1
+
 ; Timer1 = 51.2us
 ; 128 = 6.55ms..66%
 ; 195 = 10.0ms..100%
-.equ	PWM_R_STOP		=	0				; Speed constants
+.equ	PWM_R_STOP		=	1				; Speed constants
 .equ	PWM_R_SLOW		=	PWM_R_STOP+49
 .equ	PWM_R_MED		=	PWM_R_STOP+98
 .equ	PWM_R_FAST		=	PWM_R_STOP+195
 
-.equ	PWM_L_STOP		=	0
+.equ	PWM_L_STOP		=	1
 .equ	PWM_L_SLOW		=	PWM_L_STOP+49
-.equ	PWM_L_MED		=	PWM_L_STOP+98
+.equ	PWM_L_MED		=	PWM_L_STOP+85
 .equ	PWM_L_FAST		=	PWM_L_STOP+195
 
 .equ	DIR_FWD			=	0				; Direction constants
@@ -107,7 +109,23 @@ pwm_dc_init_io:
 	sbi		DDRD, PWM_B1_LEFT
 	sbi		DDRD, PWM_B2_LEFT
 ;
+	sbi		DDRB, PWM_STBY
+;
 	ret
+
+/*
+ * Set STBY On
+ */
+ pwm_stby_on:
+	sbi		PORTB, PWM_STBY
+ 	ret
+
+/*
+ * Set STBY Off
+ */
+ pwm_stby_off:
+	cbi		PORTB, PWM_STBY
+ 	ret
 
 /*
  * Set PWM RIGHT to STOP
@@ -151,14 +169,14 @@ pwm_set_right_dir:
 	tst		r17
 	breq	psrd_skip00
 ; FWD
-	cbi		PORTD, PWM_A2_RIGHT
-	sbi		PORTD, PWM_A1_RIGHT
+	sbi		PORTD, PWM_A2_RIGHT
+	cbi		PORTD, PWM_A1_RIGHT
 	ret
 ;
 psrd_skip00:
 ; REV
-	sbi		PORTD, PWM_A2_RIGHT
-	cbi		PORTD, PWM_A1_RIGHT
+	cbi		PORTD, PWM_A2_RIGHT
+	sbi		PORTD, PWM_A1_RIGHT
 	ret
 
 /*
@@ -203,14 +221,14 @@ pwm_set_left_dir:
 	tst		r17
 	breq	psld_skip00
 ; FWD
-	cbi		PORTD, PWM_B2_LEFT
-	sbi		PORTD, PWM_B1_LEFT
+	sbi		PORTD, PWM_B2_LEFT
+	cbi		PORTD, PWM_B1_LEFT
 	ret
 ;
 psld_skip00:
 ; REV
-	sbi		PORTD, PWM_B2_LEFT
-	cbi		PORTD, PWM_B1_LEFT
+	cbi		PORTD, PWM_B2_LEFT
+	sbi		PORTD, PWM_B1_LEFT
 	ret
 
 /*

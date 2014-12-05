@@ -124,7 +124,7 @@ st_init_tmr1:
  * NOTE: Rate set for 56.4us
  */
 st_init_tmr2:
-	ldi		R16, 70				; 140
+	ldi		R16, 140			; 140
 	sts		OCR2A, R16
 ;
 	ldi		R16, (1<<WGM01)		; reset on CTC match

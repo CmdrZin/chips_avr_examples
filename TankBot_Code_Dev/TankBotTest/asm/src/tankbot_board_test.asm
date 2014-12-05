@@ -11,6 +11,9 @@
  *
  */
 
+.equ		TB_STATUS_LED	=	PORTB0
+
+
 .DSEG
 tb_delay:		.BYTE	1
 tb_buffer:		.BYTE	4
@@ -18,38 +21,58 @@ tb_count:		.BYTE	1
 
 
 .CSEG
-
-tb_led1_on:
-	sbi		PORTD, PWM_B2_LEFT				; D2 ON
+/*
+ * Test RS-232 Serial
+ *
+ */
+tb_serial:
+	sbis	GPIOR0, DEMO_10MS_TIC		; test 10ms tic
+	ret									; EXIT..not set
+;
+	cbi		GPIOR0, DEMO_10MS_TIC		; clear tic10ms flag set by interrupt
+; check delay
+	lds		r16, tb_delay
+	dec		r16
+	sts		tb_delay, r16
+	breq	tbs_skip00
+	ret									; EXIT..not time
+tbs_skip00:
+	ldi		r16, 10						; 100ms rate
+	sts		tb_delay, r16
+; Send banner
+	call	tb_send_banner_serial
+; Send a character
+	ldi		r17, 'C'
+	call	serial_send_byte
+; Check for input
+	call	serial_recv_byte
+	tst		r18
+	brne	tbs_exit
+	call	serial_send_byte			; echo back
+;
+tbs_exit:
 	ret
 
-tb_led1_off:
-	cbi		PORTD, PWM_B2_LEFT				; D2 OFF
+/*
+ * Send Text Banner through Serial Port
+ */
+tb_send_banner_serial:
+	ldi		ZL, LOW(TB_TEXT_BANNER<<1)
+	ldi		ZH, HIGH(TB_TEXT_BANNER<<1)
+tsbs_loop00:
+	lpm		r17, Z+
+	tst		r17
+	breq	tsbs_exit
+	call	serial_send_byte
+	rjmp	tsbs_loop00
+;
+tsbs_exit:
 	ret
 
-tb_led2_on:
-	sbi		PORTD, PWM_B1_LEFT				; D3 ON
-	ret
+// NULL terminated text.
+TB_TEXT_BANNER:
+.db		'T','A','N','K',' ','B','O','T',0x0A,0x0D,0,0
 
-tb_led2_off:
-	cbi		PORTD, PWM_B1_LEFT				; D3 OFF
-	ret
-
-tb_led3_on:
-	sbi		PORTD, PWM_A1_RIGHT				; D4 ON
-	ret
-
-tb_led3_off:
-	cbi		PORTD, PWM_A1_RIGHT				; D4 OFF
-	ret
-
-tb_led4_on:
-	sbi		PORTD, PWM_A2_RIGHT				; D5 ON
-	ret
-
-tb_led4_off:
-	cbi		PORTD, PWM_A2_RIGHT				; D5 OFF
-	ret
 
 /*
  * Test logger out to I2C Slave
@@ -215,7 +238,7 @@ tirl_skip40:
 tb_sonar_range_leds:
 	lds		r16, range_s_left
 	cpi		r16, SONAR_LIMIT
-	brge	tsrl_skip01
+	brsh	tsrl_skip01
 	sbi		PORTD, PWM_A1_RIGHT				; ON
 	rjmp	tsrl_skip10
 tsrl_skip01:
@@ -224,7 +247,7 @@ tsrl_skip01:
 tsrl_skip10:
 	lds		r16, range_s_center
 	cpi		r16, SONAR_LIMIT
-	brge	tsrl_skip11
+	brsh	tsrl_skip11
 	sbi		PORTD, PWM_A2_RIGHT				; ON
 	rjmp	tsrl_skip20
 tsrl_skip11:
@@ -233,7 +256,7 @@ tsrl_skip11:
 tsrl_skip20:
 	lds		r16, range_s_right
 	cpi		r16, SONAR_LIMIT
-	brge	tsrl_skip21
+	brsh	tsrl_skip21
 	sbi		PORTD, PWM_B1_LEFT				; ON
 	rjmp	tsrl_skip30
 tsrl_skip21:
@@ -244,13 +267,15 @@ tsrl_skip30:
 
 
 /*
- * Cycle LEDs 255 times.
+ * Cycle LEDs
  */
 tbtest_leds:
-	sbi		PORTD, PWM_A2_RIGHT
-	sbi		PORTD, PWM_A1_RIGHT
-	sbi		PORTD, PWM_B2_LEFT
-	sbi		PORTD, PWM_B1_LEFT
+	sbi		DDRD, PWM_A2_RIGHT		; Set LED IO to output
+	sbi		DDRD, PWM_A1_RIGHT
+	sbi		DDRD, PWM_B2_LEFT
+	sbi		DDRD, PWM_B1_LEFT
+;
+	sbi		DDRB, TB_STATUS_LED
 ;
 	ldi		r16, 20
 tbl_mloop:
@@ -259,49 +284,99 @@ tbl_loop00:
 	sbis	GPIOR0, DEMO_10MS_TIC		; test 10ms tic
 	rjmp	tbl_loop00
 	cbi		GPIOR0, DEMO_10MS_TIC		; clear tic10ms flag set by interrup
-	cbi		PORTD, PWM_A2_RIGHT
+	call	tb_led1_on
 tbl_loop01:
 	sbis	GPIOR0, DEMO_10MS_TIC		; test 10ms tic
 	rjmp	tbl_loop01
 	cbi		GPIOR0, DEMO_10MS_TIC		; clear tic10ms flag set by interrup
-	cbi		PORTD, PWM_A1_RIGHT
+	call	tb_led2_on
 tbl_loop02:
 	sbis	GPIOR0, DEMO_10MS_TIC		; test 10ms tic
 	rjmp	tbl_loop02
 	cbi		GPIOR0, DEMO_10MS_TIC		; clear tic10ms flag set by interrup
-	cbi		PORTD, PWM_B2_LEFT
+	call	tb_led3_on
 tbl_loop03:
 	sbis	GPIOR0, DEMO_10MS_TIC		; test 10ms tic
 	rjmp	tbl_loop03
 	cbi		GPIOR0, DEMO_10MS_TIC		; clear tic10ms flag set by interrup
-	sbi		PORTD, PWM_B1_LEFT
+	call	tb_led4_on
+tbl_loop04:
+	sbis	GPIOR0, DEMO_10MS_TIC		; test 10ms tic
+	rjmp	tbl_loop04
+	cbi		GPIOR0, DEMO_10MS_TIC		; clear tic10ms flag set by interrup
+	call	tb_status_on
 ;
 tbl_loop10:
 	sbis	GPIOR0, DEMO_10MS_TIC		; test 10ms tic
 	rjmp	tbl_loop10
 	cbi		GPIOR0, DEMO_10MS_TIC		; clear tic10ms flag set by interrup
-	sbi		PORTD, PWM_A2_RIGHT
+	call	tb_led1_off
 tbl_loop11:
 	sbis	GPIOR0, DEMO_10MS_TIC		; test 10ms tic
 	rjmp	tbl_loop11
 	cbi		GPIOR0, DEMO_10MS_TIC		; clear tic10ms flag set by interrup
-	sbi		PORTD, PWM_A1_RIGHT
+	call	tb_led2_off
 tbl_loop12:
 	sbis	GPIOR0, DEMO_10MS_TIC		; test 10ms tic
 	rjmp	tbl_loop12
 	cbi		GPIOR0, DEMO_10MS_TIC		; clear tic10ms flag set by interrup
-	sbi		PORTD, PWM_B2_LEFT
+	call	tb_led3_off
 tbl_loop13:
 	sbis	GPIOR0, DEMO_10MS_TIC		; test 10ms tic
 	rjmp	tbl_loop13
 	cbi		GPIOR0, DEMO_10MS_TIC		; clear tic10ms flag set by interrup
-	cbi		PORTD, PWM_B1_LEFT
+	call	tb_led4_off
+tbl_loop14:
+	sbis	GPIOR0, DEMO_10MS_TIC		; test 10ms tic
+	rjmp	tbl_loop14
+	cbi		GPIOR0, DEMO_10MS_TIC		; clear tic10ms flag set by interrup
+	call	tb_status_off
 ;
 	dec		r16
 	brne	tbl_mloop
 ;
-	cbi		PORTD, PWM_A2_RIGHT
-	cbi		PORTD, PWM_A1_RIGHT
-	cbi		PORTD, PWM_B2_LEFT
-	cbi		PORTD, PWM_B1_LEFT
+	ret
+
+
+/*
+ * LED control functions.
+ */
+tb_led1_on:
+	sbi		PORTD, PWM_B2_LEFT				; D2 ON
+	ret
+
+tb_led1_off:
+	cbi		PORTD, PWM_B2_LEFT				; D2 OFF
+	ret
+
+tb_led2_on:
+	sbi		PORTD, PWM_B1_LEFT				; D3 ON
+	ret
+
+tb_led2_off:
+	cbi		PORTD, PWM_B1_LEFT				; D3 OFF
+	ret
+
+tb_led3_on:
+	sbi		PORTD, PWM_A1_RIGHT				; D4 ON
+	ret
+
+tb_led3_off:
+	cbi		PORTD, PWM_A1_RIGHT				; D4 OFF
+	ret
+
+tb_led4_on:
+	sbi		PORTD, PWM_A2_RIGHT				; D5 ON
+	ret
+
+tb_led4_off:
+	cbi		PORTD, PWM_A2_RIGHT				; D5 OFF
+	ret
+
+tb_status_on:
+	sbi		PORTB, TB_STATUS_LED			; D6 ON
+	ret
+
+tb_status_off:
+	cbi		PORTB, TB_STATUS_LED			; D6 OFF
 	ret

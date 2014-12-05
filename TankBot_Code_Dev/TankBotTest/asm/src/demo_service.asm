@@ -42,9 +42,11 @@ tank_demo_init:
 	ldi		R16, DEMO_DELAY_COUNT
 	sts		demo_delay, R16
 ;
-	ldi		R16, DEMO_MODE_SQUARE
-;;	ldi		R16, DEMO_MODE_AVOID
+;;	ldi		R16, DEMO_MODE_SQUARE
+	ldi		R16, DEMO_MODE_AVOID
 	sts		demo_mode, R16
+;
+	call	pwm_stby_on
 ;
 	ret
 
@@ -85,7 +87,7 @@ sd_skip001:
 	ldi		R17, PWM_L_MED
 	call	pwm_set_left
 ;
-	ldi		R16, 200
+	ldi		R16, 100
 	sts		demo_s_time, R16			; run for 2 sec
 ;
 	ldi		R16, DEMO_SQUARE_TURN90
@@ -104,9 +106,10 @@ sd_skip010:
 ; yes
 sd_skip011:
 ; Turn Left
-	call	pwm_stop_left
+	ldi		R17, DIR_REV
+	call	pwm_set_left_dir
 ;
-	ldi		R16, 105					; Tune this to turn 90 degrees
+	ldi		R16, 79						; Tune this to turn 90 degrees
 	sts		demo_s_time, R16			; run for 2 sec
 ;
 	ldi		R16, DEMO_SQUARE_FWD
@@ -161,15 +164,15 @@ sd_skip210:
 	brne	sd_skip220
 ; Check detectors..ALL must be zero
 	call	obstical_check
-	tst		r17							; 0: no obsticals
+	cpi		r17, 0						; 0: no obsticals
 	brne	sd_skip211
 	rjmp	sd_exit						; ok to continue
 ; Obstical detected
 sd_skip211:
 ; Backup at SLOW speed
-	ldi		R17, PWM_L_SLOW
+	ldi		R17, PWM_L_MED
 	call	pwm_set_left
-	ldi		R17, PWM_R_SLOW
+	ldi		R17, PWM_R_MED
 	call	pwm_set_right
 ;
 	ldi		R17, DIR_REV
@@ -195,7 +198,7 @@ sd_skip220:
 	ldi		R17, DIR_FWD
 	call	pwm_set_right_dir
 ;
-	ldi		R16, 105				; tune for 180 degree turn
+	ldi		R16, 175				; tune for 180 degree turn
 	sts		demo_s_time, R16
 ;
 	ldi		R16, DEMO_AVOID_FWD
@@ -226,19 +229,19 @@ sd_exit:
 obstical_check:
 	lds		r16, range_s_left
 	cpi		r16, SONAR_LIMIT
-	brge	oc_skip10
+	brsh	oc_skip10
 	rjmp	oc_block_exit
 ;
 oc_skip10:
 	lds		r16, range_s_center
 	cpi		r16, SONAR_LIMIT
-	brge	oc_skip20
+	brsh	oc_skip20
 	rjmp	oc_block_exit
 ;
 oc_skip20:
 	lds		r16, range_s_right
 	cpi		r16, SONAR_LIMIT
-	brge	oc_skip30
+	brsh	oc_skip30
 	rjmp	oc_block_exit
 ;
 oc_skip30:

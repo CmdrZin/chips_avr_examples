@@ -156,7 +156,7 @@ rss_skip00:
 ;
 rss_skip10:
 ;
-	call	tb_led4_on
+	call	tb_status_on
 ;
 	cpi		r16, RNG_S_WAIT_LEFT
 	brne	rss_skip20
@@ -181,7 +181,7 @@ rss_skip10:
 ;
 rss_skip20:
 ;
-	call	tb_led4_off
+	call	tb_status_off
 ;
 	cpi		r16, RNG_S_WAIT_CENTER
 	brne	rss_skip30

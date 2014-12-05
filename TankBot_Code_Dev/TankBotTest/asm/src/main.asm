@@ -102,10 +102,11 @@ RESET:
 	call	st_init_tmr2
 	call	adc_init_hdwr
 	call	pwm_dc_init
-;;	call	tank_demo_init
+	call	tank_demo_init
 	call	range_ir_service_init
 	call	range_s_service_init
 	call	i2c_init_master
+	call	serial_init
 ;
 	sei							; enable intr
 ;
@@ -115,17 +116,18 @@ main_m:
 ;
 m_skip01:
 ; use only one of these at a time. NOT with demo. Messes up PWM.
-;;	call	tb_ir_range_leds
-;;	call	tb_sonar_range_leds
+;;	call	tb_ir_range_leds		; checked
+;;	call	tb_sonar_range_leds		; checked
 ;
-	call	tb_logger				; Output a test message every 100ms.
+;;	call	tb_logger				; Output a test message every 100ms. checked.
 ;
-;;;	call	tank_demo
+	call	tank_demo
 ;
-	call	range_ir_service
+;;;	call	range_ir_service		; checked
 ;
-	call	range_sonar_service
+	call	range_sonar_service		; checked
 ;
+;;;	call	tb_serial				; send 'C' every 100ms
 ;
 	rjmp	main_m
 
@@ -153,4 +155,7 @@ trap_intr:
 .include "tankbot_board_test.asm"
 // I2C Master Support
 .include "i2c_master.asm"
-
+// RS-232 Serial Support
+.include "serial_lib.asm"
+// Fifo Support
+.include "fifo_lib.asm"
