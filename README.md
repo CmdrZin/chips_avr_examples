@@ -9,4 +9,5 @@ These are projects that use the chip_avr_asm_lib modules.
 |I2C_Slave_Code_Dev | Slave code Logger example.|
 |R2_Comm_Link | Audio communications using Dual Tones and Goertiz tone detection.|
 |SumoBot_Code_Dev | Control of a Sumo Bot base using my LCD_CDM-16100 board.|
+|  SumoBot_Maze | Control of a Sumo Bot base using Sumo Maze board.|
 |TankBot_Code_Dev | DC PWM motor control, Sonar and IR sensors.|
