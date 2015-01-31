@@ -28,6 +28,15 @@ smb_led1_toggle:	.BYTE	1
  * PWM Test..Disable Demo service when using this function.
  */
 smb_set_pwm:
+	lds		R16, floor_det_status
+	andi	R16, FLOOR_DET_CENTER	; test center only
+	brne	smbs_skip00
+	ldi		r18, high(PWM_R_MED_R)
+	ldi		r17, low(PWM_R_MED_R)
+	call	pwm_set_right
+	ret
+;
+smbs_skip00:
 	call	pwm_stop_right
 	call	pwm_stop_left
 	ret

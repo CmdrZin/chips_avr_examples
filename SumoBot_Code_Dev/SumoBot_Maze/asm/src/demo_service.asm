@@ -54,9 +54,17 @@ sumo_demo_init:
 	ldi		R16, DEMO_DELAY_COUNT
 	sts		demo_delay, R16
 ;
-	ldi		R16, DEMO_MODE_SQUARE
-;;;	ldi		R16, DEMO_MODE_AVOID
+;;;	ldi		R16, DEMO_MODE_SQUARE
+;;;	sts		demo_mode, R16
+;;;	ldi		R16, DEMO_SQUARE_FWD
+;;;	sts		demo_state, R16					; next state
+;;;	ldi		R16, 100
+;;;	sts		demo_s_time, R16				; run for 1 sec
+;
+	ldi		R16, DEMO_MODE_AVOID
 	sts		demo_mode, R16
+	ldi		r16, DEMO_AVOID_FWD
+	sts		demo_state, r16					; next state
 ;
 	ret
 
@@ -108,8 +116,8 @@ sd_skip001:
 	ldi		r17, low(PWM_L_MED_F)
 	call	pwm_set_left
 ;
-	ldi		R16, 200
-	sts		demo_s_time, R16			; run for 2 sec
+	ldi		R16, 100
+	sts		demo_s_time, R16			; run for 1 sec
 ;
 	ldi		R16, DEMO_SQUARE_TURN90
 	sts		demo_state, R16					; next state
@@ -131,8 +139,8 @@ sd_skip011:
 ; DB--
 	call	pwm_stop_left
 ;
-	ldi		R16, 105
-	sts		demo_s_time, R16			; run for 2 sec
+	ldi		R16, 90
+	sts		demo_s_time, R16			; run for n sec
 ;
 	ldi		R16, DEMO_SQUARE_FWD
 	sts		demo_state, R16					; next state
@@ -169,11 +177,11 @@ sd_skip21:
 ;
 sd_skip201:
 ; Go forward
-	ldi		r16, high(PWM_R_MED_F)
+	ldi		r18, high(PWM_R_MED_F)
 	ldi		r17, low(PWM_R_MED_F)
 	call	pwm_set_right
 
-	ldi		r16, high(PWM_L_MED_F)
+	ldi		r18, high(PWM_L_MED_F)
 	ldi		r17, low(PWM_L_MED_F)
 	call	pwm_set_left
 ;
@@ -194,10 +202,10 @@ sd_skip210:
 ; Detected BLACK
 sd_skip211:
 ; Backup
-	ldi		r16, high(PWM_R_MED_R)
+	ldi		r18, high(PWM_R_MED_R)
 	ldi		r17, low(PWM_R_MED_R)
 	call	pwm_set_right
-	ldi		r16, high(PWM_L_MED_R)
+	ldi		r18, high(PWM_L_MED_R)
 	ldi		r17, low(PWM_L_MED_R)
 	call	pwm_set_left
 ;
@@ -217,11 +225,11 @@ sd_skip220:
 	sts		demo_s_time, R16		; update
 	brne	sd_exit					; no
 ; Turn around
-	ldi		r16, high(PWM_R_MED_R)
+	ldi		r18, high(PWM_R_MED_R)
 	ldi		r17, low(PWM_R_MED_R)
 	call	pwm_set_right
 
-	ldi		r16, high(PWM_L_MED_F)
+	ldi		r18, high(PWM_L_MED_F)
 	ldi		r17, low(PWM_L_MED_F)
 	call	pwm_set_left
 ;

@@ -31,12 +31,12 @@ adc_L:		.BYTE	1			; store lower 2 bits as 7:6
  * 20MHz CPU clock.
  * Single Ended
  * Available channels 0 - 6
- * ATmega164P has Internal 2.56v reference.
+ * ATmega164P has Internal 2.56v reference. Use VCC (+5)
  *
  * resources:
  */
 adc_init_hdwr:
-	ldi		R16, (1<<REFS1)|(1<<REFS0)|(1<<ADLAR)	; Internal Vref=2.56v, Left Adj
+	ldi		R16, (0<<REFS1)|(1<<REFS0)|(1<<ADLAR)	; Internal Vref=VCC (+5), Left Adj
 	sts		ADMUX, R16								; lower 3 bits select channel.
 ;
 	ldi		R16, (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)	; ADC Enable, CPU/128 clock (20MHz)

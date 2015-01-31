@@ -25,7 +25,7 @@
 .equ	FLOOR_LED_IO_LEFT	= PORTD6
 
 .equ	FLOOR_ADC_CHAN		= ADCH6
-.equ	FLOOR_DET_LEVEL		= 128		; 0 - 255
+.equ	FLOOR_DET_LEVEL		= 40		; 0 - 255
 
 ; floor_state
 .equ	FLOOR_STATE_IDLE	= 0
@@ -126,12 +126,11 @@ fds_skip10:
 	cpi		R16, FLOOR_RIGHT_WAIT
 	brne	fds_skip20
 ; RIGHT read sensor
-;
 	ldi		r17, FLOOR_ADC_CHAN
 	call	adc_trigger					; BLOCKing call. Trigger and wait.
 ; Turn OFF RIGHT LED
 	sbi		PORTD, FLOOR_LED_IO_RIGHT
-;	check and update status
+; check and update status
 	cpi		r17, FLOOR_DET_LEVEL
 	brsh	fds_skip11
 	lds		r16, floor_det_status
@@ -151,17 +150,28 @@ fds_skip12:
 	sts		floor_state, r16
 	rjmp	fds_exit					; EXIT
 ;
-;
 fds_skip20:
 	cpi		R16, FLOOR_CENTER_WAIT
-	brne	fds_skip21
+	brne	fds_skip30
 ; CENTER read sensor
-;
-;;	call	adc_read_ch					; BLOCKing call. Trigger and wait.
-;;	check and update status
+	ldi		r17, FLOOR_ADC_CHAN
+	call	adc_trigger					; BLOCKing call. Trigger and wait.
 ;
 ; Turn OFF CENTER LED
 	sbi		PORTD, FLOOR_LED_IO_CENTER
+; check and update status
+	cpi		r17, FLOOR_DET_LEVEL
+	brsh	fds_skip21
+	lds		r16, floor_det_status
+ 	ori		r16, FLOOR_DET_CENTER		; set flag
+	rjmp	fds_skip22
+;
+fds_skip21:
+	lds		r16, floor_det_status
+ 	andi	r16, ~FLOOR_DET_CENTER		; clear flag
+fds_skip22:
+	sts		floor_det_status, r16		; update
+;
 ; Turn ON LEFT LED
 	cbi		PORTD, FLOOR_LED_IO_LEFT
 ; and setup for wait
@@ -169,25 +179,29 @@ fds_skip20:
 	sts		floor_state, r16
 	rjmp	fds_exit					; EXIT
 ;
-fds_skip21:
-;
 fds_skip30:
 	cpi		R16, FLOOR_LEFT_WAIT
 	brne	fds_skip31
 ; LEFT read sensor
-;
-;;	call	adc_read_ch					; BLOCKing call. Trigger and wait.
-;;	check and update status
+	ldi		r17, FLOOR_ADC_CHAN
+	call	adc_trigger					; BLOCKing call. Trigger and wait.
 ;
 ; Turn OFF LEFT LED
 	sbi		PORTD, FLOOR_LED_IO_LEFT
-; and setup for wait
-	ldi		r16, FLOOR_STATE_IDLE
-	sts		floor_state, r16
-	rjmp	fds_exit					; EXIT
-
-fds_skip31:
+; check and update status
+	cpi		r17, FLOOR_DET_LEVEL
+	brsh	fds_skip31
+	lds		r16, floor_det_status
+ 	ori		r16, FLOOR_DET_LEFT			; set flag
+	rjmp	fds_skip32
 ;
+fds_skip31:
+	lds		r16, floor_det_status
+ 	andi	r16, ~FLOOR_DET_LEFT		; clear flag
+fds_skip32:
+	sts		floor_det_status, r16		; update
+;
+; and setup for wait
 	ldi		r16, FLOOR_STATE_IDLE
 	sts		floor_state, r16
 ;
