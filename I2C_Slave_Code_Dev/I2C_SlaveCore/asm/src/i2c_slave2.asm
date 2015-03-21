@@ -1,0 +1,335 @@
+/*
+ * I2C Slave Interface (rev 2)
+ *
+ * org: 6/22/2014
+ * rev: 03/17/2015
+ * auth: Nels "Chip" Pearson
+ *
+ * This is an interrupt driven I2C Slave interface to the TWI hardware.
+ *
+ * This implementation uses a common FIFO utility to buffer input and output data.
+ *
+ * TODO: Have a flag so that the app can select 'Auto re-enable after last byte' or 'Manual re-enable'.
+ *
+ * Usage:
+ * 	.include i2c_slave.asm
+ *	.include fifo_lib.asm
+ *
+ */ 
+
+.equ	I2C_DEMO_SLAVE_ADRS	= (0x23)
+.equ	LCD_SLAVE_ADRS		= (0x25)
+.equ	TONE_SLAVE_ADRS		= (0x56)
+.equ	SLAVE_ADRS 			= I2C_DEMO_SLAVE_ADRS	// Set to desired address for Slave.
+
+// TWI Slave Receiver staus codes
+.equ	TWI_SRX_ADR_ACK				= 0x60  // Own SLA+W has been received ACK has been returned
+.equ	TWI_SRX_ADR_ACK_M_ARB_LOST	= 0x68  // Own SLA+W has been received; ACK has been returned
+.equ	TWI_SRX_GEN_ACK				= 0x70  // General call address has been received; ACK has been returned
+.equ	TWI_SRX_GEN_ACK_M_ARB_LOST	= 0x78  // General call address has been received; ACK has been returned
+.equ	TWI_SRX_ADR_DATA_ACK		= 0x80  // Previously addressed with own SLA+W; data has been received; ACK has been returned
+.equ	TWI_SRX_ADR_DATA_NACK		= 0x88  // Previously addressed with own SLA+W; data has been received; NOT ACK has been returned
+.equ	TWI_SRX_GEN_DATA_ACK		= 0x90  // Previously addressed with general call; data has been received; ACK has been returned
+.equ	TWI_SRX_GEN_DATA_NACK		= 0x98  // Previously addressed with general call; data has been received; NOT ACK has been returned
+.equ	TWI_SRX_STOP_RESTART		= 0xA0  // A STOP condition or repeated START condition has been received while still addressed as Slave
+// TWI Slave Transmitter staus codes
+.equ	TWI_STX_ADR_ACK				= 0xA8  // Own SLA+R has been received; ACK has been returned
+.equ	TWI_STX_ADR_ACK_M_ARB_LOST	= 0xB0  // Own SLA+R has been received; ACK has been returned
+.equ	TWI_STX_DATA_ACK			= 0xB8  // Data byte in TWDR has been transmitted; ACK has been received
+.equ	TWI_STX_DATA_NACK			= 0xC0  // Data byte in TWDR has been transmitted; NOT ACK has been received
+.equ	TWI_STX_DATA_ACK_LAST_BYTE	= 0xC8  // Last byte in TWDR has been transmitted (TWEA = 0); ACK has been received
+// TWI Miscellaneous status codes
+.equ	TWI_NO_STATE				= 0xF8  // No relevant state information available; TWINT = 0
+.equ	TWI_BUS_ERROR				= 0x00  // Bus error due to an illegal START or STOP condition
+
+// I2C Error values
+.equ	I2C_ERROR_NONE			= 0x00		// No errors
+.equ	I2C_ERROR_OV			= 0x01		// Overflow on input buffer.
+
+// I2C Status values
+.equ	I2C_STATUS_IDLE			= 0x00
+.equ	I2C_STATUS_RECEIVING	= 0x01
+.equ	I2C_STATUS_MSG_RCVD		= 0x02		// Rec'd message in buffer.
+.equ	I2C_STATUS_SENDING		= 0x11
+
+
+.equ	I2C_BUFFER_SIZE			= 18
+
+.DSEG
+// Matches FIFO_LIB data struct for buffers.
+i2c_buffer_in:			.BYTE	I2C_BUFFER_SIZE
+i2c_in_fifo_head:		.BYTE	1
+i2c_in_fifo_tail:		.BYTE	1
+
+i2c_buffer_out:			.BYTE	I2C_BUFFER_SIZE
+i2c_out_fifo_head:		.BYTE	1
+i2c_out_fifo_tail:		.BYTE	1
+
+i2c_buffer_out_cnt:		.BYTE	1			; max count to set last byte
+i2c_xmit_cnt:			.BYTE	1			; bytes sent so far.
+
+i2c_error:				.BYTE	1			; Error code
+i2c_status:				.BYTE	1			; I2C status byte. 
+
+.CSEG
+/*
+ * Initialize the TWI to support I2C Slave interface.
+ * input reg:	none
+ * output reg:	none
+ *
+ * I2C rate = CPU/(16 + 2(TWBR)*(4^TWPS0:1)) = 20^6Hz / 200 = 100kHz
+ * 20Mhz / 200 = 100kHz .. 16 + (2*92)*1) = 200
+ */
+i2c_init_slave:
+	ldi		R16, 92
+	sts		TWBR, R16
+;
+	ldi		R16, 0			; Prescale TWPS1:0 = 00 .. 4^0 = 1
+	sts		TWSR, R16
+;
+	ldi		R16, (SLAVE_ADRS<<1)|0x01
+	sts		TWAR, R16					; set Slave address READ
+	clr		R16
+	sts		TWAMR, R16					; enforce address compare..1's disable bit check.
+;
+	ldi		R16, (1<<TWEN)|(0<<TWIE)|(0<<TWINT)|(0<<TWEA)|(0<<TWSTA)|(0<<TWSTO)|(0<<TWWC)
+	sts		TWCR, R16
+; prep FIFOs
+	clr		r16
+	sts		i2c_in_fifo_head, r16
+	sts		i2c_in_fifo_tail, r16
+	sts		i2c_out_fifo_head, r16
+	sts		i2c_out_fifo_tail, r16
+;
+	ret
+
+/*
+ * Initialize the TWI for SLAVE I2C interface.
+ * input reg:	none
+ * output reg:	none
+ */
+i2c_slave_start:
+	ldi		r16, I2C_STATUS_IDLE
+	sts		i2c_status, r16
+;
+	ldi		R16, (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWEA)|(0<<TWSTA)|(0<<TWSTO)|(0<<TWWC)
+	sts		TWCR, R16
+	ret
+
+/*
+ * I2C interrupt service
+ * 
+ * input reg:
+ * output reg:
+ * resources: i2c_buff - data buffer
+ *
+ * Clear TWCR.TWINT by setting it to 1.
+ *
+ * Receiving Data FROM MASTER
+ *	TWI_SRX_ADR_ACK				Own SLA+W has been received; ACK has been returned
+ *	TWI_SRX_ADR_ACK_M_ARB_LOST	Own SLA+W has been received; ACK has been returned
+ * 	TWI_SRX_GEN_ACK				General call address has been received; ACK has been returned
+ *	TWI_SRX_GEN_ACK_M_ARB_LOST	General call address has been received; ACK has been returned
+ *	TWI_SRX_ADR_DATA_ACK		Previously addressed with own SLA+W; data received; ACK has been returned
+ *	TWI_SRX_ADR_DATA_NACK		Previously addressed with own SLA+W; data received; NACK has been returned as last byte?
+ *	TWI_SRX_GEN_DATA_ACK		Previously addressed with general call; data has been received; ACK has been returned
+ *	TWI_SRX_GEN_DATA_NACK		Previously addressed with general call; data has been received; NOT ACK has been returned
+ *	TWI_SRX_STOP_RESTART		A STOP condition or repeated START condition has been received while still addressed as Slave
+ *
+ * Sending Data TO MASTER
+ *	TWI_STX_ADR_ACK				Own SLA+R has been received; ACK has been returned
+ *	TWI_STX_ADR_ACK_M_ARB_LOST	Own SLA+R has been received; ACK has been returned
+ *	TWI_STX_DATA_ACK			Data byte in TWDR has been transmitted; ACK has been received
+ *	TWI_STX_DATA_NACK			Data byte in TWDR has been transmitted; NACK has been received as last byte.
+ *	TWI_STX_DATA_ACK_LAST_BYTE	Last byte in TWDR has been transmitted (TWEA = 0); ACK has been received
+ *
+ */
+ii_skip80e:
+	rjmp	ii_skip80
+ii_skip88e:
+	rjmp	ii_skip88
+ii_skip90e:
+	rjmp	ii_skip90
+ii_skip98e:
+	rjmp	ii_skip98
+ii_skipA0e:
+	rjmp	ii_skipA0
+ii_skipA8e:
+	rjmp	ii_skipA8
+ii_skipB0e:
+	rjmp	ii_skipB0
+ii_skipB8e:
+	rjmp	ii_skipB8
+ii_skipC0e:
+	rjmp	ii_skipC0
+ii_skipC8e:
+	rjmp	ii_skipC8
+
+i2c_slave_isr:
+; Save SREG
+	push	R0
+	in		R0, SREG
+	push	R0
+;
+	push	R16
+	push	R17
+;
+	lds		R16, TWSR				; get status
+	andi	R16, 0xF8				; mask out bits
+; Receive data from Master
+	cpi		R16, TWI_SRX_ADR_ACK
+	breq	ii_skip60
+	cpi		R16, TWI_SRX_ADR_ACK_M_ARB_LOST
+	breq	ii_skip68
+	cpi		R16, TWI_SRX_GEN_ACK
+	breq	ii_skip70
+	cpi		R16, TWI_SRX_GEN_ACK_M_ARB_LOST
+	breq	ii_skip78
+	cpi		R16, TWI_SRX_ADR_DATA_ACK
+	breq	ii_skip80e
+	cpi		R16, TWI_SRX_ADR_DATA_NACK
+	breq	ii_skip88e
+	cpi		R16, TWI_SRX_GEN_DATA_ACK
+	breq	ii_skip90e
+	cpi		R16, TWI_SRX_GEN_DATA_NACK
+	breq	ii_skip98e
+	cpi		R16, TWI_SRX_STOP_RESTART
+	breq	ii_skipA0e
+; Send data to Master
+	cpi		R16, TWI_STX_ADR_ACK
+	breq	ii_skipA8e
+	cpi		R16, TWI_STX_ADR_ACK_M_ARB_LOST
+	breq	ii_skipB0e
+	cpi		R16, TWI_STX_DATA_ACK
+	breq	ii_skipB8e
+	cpi		R16, TWI_STX_DATA_NACK
+	breq	ii_skipC0e
+	cpi		R16, TWI_STX_DATA_ACK_LAST_BYTE
+	breq	ii_skipC8e
+;
+	rjmp	ii_clear_intr			; Unknown Status byte.
+;
+ii_skip60:
+// DEBUG ++
+	call	turn_on_led
+// DEBUG --
+; Own SLA+W has been received; ACK has been returned. Expect to receive data.
+	ldi		R16, I2C_ERROR_NONE
+	sts		i2c_error, R16				; clear errors
+	ldi		r16, I2C_STATUS_RECEIVING
+	sts		i2c_status, r16				; set status as RECV
+	rjmp	ii_clear_intr
+;
+ii_skip68:
+; Own SLA+W has been received; ACK has been returned. ARB lost.
+	rjmp	ii_clear_intr
+;
+ii_skip70:
+; General call address has been received; ACK has been returned
+; A General 00 address has been received..IGNORE
+ii_skip78:
+; not Supported
+	rjmp	ii_clear_intr
+
+ii_skip80:
+; Previously addressed with own SLA+W; data received; ACK has been returned
+	lds		r17, TWDR			; get data
+; NO overflow check. TODO
+; Save data to i2c_buffer_in
+	push	XL
+	push	XH
+	push	R19
+;
+	ldi		XL, LOW(i2c_buffer_in)
+	ldi		XH, HIGH(i2c_buffer_in)
+	ldi		r19, I2C_BUFFER_SIZE
+	call	fifo_put
+;
+	pop		r19
+	pop		XH
+	pop		XL
+; TWI Interface enabled, Enable TWI Interupt and clear the flag to send byte, Send ACK after next reception
+	rjmp	ii_clear_intr
+;
+ii_skip88:
+; Previously addressed with own SLA+W; data has been received; NOT ACK has been returned
+; Slave no longer addressed.
+	rjmp	ii_skip80					; save data
+;
+ii_skip90:
+; General address data has been received; ACK has been returned
+ii_skip98:
+; not Supported
+	rjmp	ii_clear_intr
+;
+ii_skipA0:
+; A STOP condition or repeated START condition has been received while still addressed as Slave
+; Enter not addressed mode and listen to address match, Enable TWI-interface and release TWI pins,
+	lds		r16, i2c_status
+	cpi		r16, I2C_STATUS_RECEIVING
+	breq	ii_skipA1
+	ldi		r16, I2C_STATUS_IDLE
+	sts		i2c_status, r16
+	rjmp	ii_clear_intr
+;
+ii_skipA1:
+	ldi		r16, I2C_STATUS_MSG_RCVD
+	sts		i2c_status, r16
+; Turn OFF interface
+	ldi		R16, (1<<TWEN)|(0<<TWIE)|(0<<TWINT)|(0<<TWEA)|(0<<TWSTA)|(0<<TWSTO)|(0<<TWWC)
+	sts		TWCR, R16
+; To restart call i2c_slave_init. Enable interrupt and clear the flag, Wait for new address match.
+	rjmp	ii_clear_intr
+;
+ii_skipA8:
+; SLA+R has been received; ACK has been returned. Setup to send data.
+ii_skipB0:
+ii_skipB8:
+// DEBUG ++
+	call	turn_off_led
+// DEBUG --
+; Data byte in TWDR has been transmitted; ACK has been received. No STOP, so send next byte.
+	push	XL
+	push	XH
+	push	R19
+	push	r18								; used by fifo_get() to return status.
+;
+	ldi		XL, LOW(i2c_buffer_out)
+	ldi		XH, HIGH(i2c_buffer_out)
+	ldi		r19, I2C_BUFFER_SIZE
+	call	fifo_get
+; TODO: Should test r18 for valid data of FIFO underflow.
+	sts		TWDR, r17							; load output data.
+; TWI Interface enabled, enable TWI Interupt, and clear the flag to send byte
+	pop		r18
+	pop		r19
+	pop		XH
+	pop		XL
+;
+	rjmp	ii_clear_intr
+;
+ii_skipB9:
+; TWI Interface enabled, enable TWI Interupt, and clear the flag to send byte
+	rjmp	ii_clear_intr
+;
+ii_skipC0:
+; Data byte in TWDR has been transmitted; NACK has been received as last byte.
+ii_skipC8:
+; last data byte sent..NACK -> End of expected data set. No more data expected in this request.
+; Enable TWI-interface and release TWI pins, Keep interrupt enabled and clear the flag, Answer next address match
+	rjmp	ii_clear_intr
+;
+ii_clear_intr:
+// This re-enables the Slave I2C interface.
+	ldi		R16, (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWEA)
+	sts		TWCR, R16
+;
+ii_exit:
+	pop		R17
+	pop		R16
+; Restore SREG
+	pop		R0
+	out		SREG, R0
+	pop		R0
+;
+	reti
