@@ -1,0 +1,2 @@
+@ECHO OFF
+"D:\Program Files (x86)\Atmel\AVR Tools\AvrAssembler2\avrasm2.exe" -S "C:\Data\EmbeddedSystems\Example AVR Code\icall_ijmp\asm\labels.tmp" -fI -W+ie -C V2E -o "C:\Data\EmbeddedSystems\Example AVR Code\icall_ijmp\asm\icall_ijmp_example.hex" -d "C:\Data\EmbeddedSystems\Example AVR Code\icall_ijmp\asm\icall_ijmp_example.obj" -e "C:\Data\EmbeddedSystems\Example AVR Code\icall_ijmp\asm\icall_ijmp_example.eep" -m "C:\Data\EmbeddedSystems\Example AVR Code\icall_ijmp\asm\icall_ijmp_example.map" "C:\Data\EmbeddedSystems\Example AVR Code\icall_ijmp\asm\src\main.asm"
