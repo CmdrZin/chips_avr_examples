@@ -1,7 +1,7 @@
 /*
- * debugAT84.c
+ * debugAT85.c
  *
- * Created: 6/8/2015 9:54:34 PM
+ * Created: 7/11/2015 11:40:34 PM
  *  Author: Chip
  */ 
 
@@ -15,57 +15,27 @@
 #include "access.h"
 #include "eeprom_util.h"
 
-#include "debugAT84.h"
+#include "debugAT85.h"
 
-const char debugVersion[] PROGMEM = "1.01";		// add spaces to pad to 4 characters.
+const char debugVersion[] PROGMEM = "1.00";		// add spaces to pad to 4 characters.
 const char buildDate[] PROGMEM = __DATE__;		// 11 bytes
 const char buildTime[] PROGMEM = __TIME__;		// 8 bytes
 
 
-#define DB_PIN13_P		PA0
-#define DB_PIN13_DDR	DDRA
-#define DB_PIN13_PORT	PORTA
-#define DB_PIN13_PIN	PINA
-
-#define DB_PIN12_P		PA1
-#define DB_PIN12_DDR	DDRA
-#define DB_PIN12_PORT	PORTA
-#define DB_PIN12_PIN	PINA
-
-#define DB_PIN11_P		PA2
-#define DB_PIN11_DDR	DDRA
-#define DB_PIN11_PORT	PORTA
-#define DB_PIN11_PIN	PINA
-
-#define DB_PIN10_P		PA3
-#define DB_PIN10_DDR	DDRA
-#define DB_PIN10_PORT	PORTA
-#define DB_PIN10_PIN	PINA
-
-#define DB_PIN8_P		PA5
-#define DB_PIN8_DDR		DDRA
-#define DB_PIN8_PORT	PORTA
-#define DB_PIN8_PIN		PINA
-
-#define DB_PIN6_P		PA7
-#define DB_PIN6_DDR		DDRA
-#define DB_PIN6_PORT	PORTA
-#define DB_PIN6_PIN		PINA
-
-#define DB_PIN2_P		PB0
+#define DB_PIN2_P		PB3
 #define DB_PIN2_DDR		DDRB
 #define DB_PIN2_PORT	PORTB
 #define DB_PIN2_PIN		PINB
 
-#define DB_PIN3_P		PB1
+#define DB_PIN3_P		PB4
 #define DB_PIN3_DDR		DDRB
 #define DB_PIN3_PORT	PORTB
 #define DB_PIN3_PIN		PINB
 
-#define DB_PIN5_P		PB2
-#define DB_PIN5_DDR		DDRB
-#define DB_PIN5_PORT	PORTB
-#define DB_PIN5_PIN		PINB
+#define DB_PIN6_P		PB1
+#define DB_PIN6_DDR		DDRB
+#define DB_PIN6_PORT	PORTB
+#define DB_PIN6_PIN		PINB
 
 
 // Current output from ADC. Left justified.
@@ -103,7 +73,7 @@ void dev_debug_service()
 
 /*
  * Command 0x30 -  Read IO PIN
- * DEV 0x30 PIN. PIN: 2-13
+ * DEV 0x30 0x01 PIN. PIN: 2,3,6
  */
 void dev_debug_read_pin()
 {
@@ -121,39 +91,9 @@ void dev_debug_read_pin()
 			data = DB_PIN3_PIN & (1<<DB_PIN3_P);		// read port and mask pin
 			break;
 
-		case 5:
-			DB_PIN5_DDR &= ~(1<<DB_PIN5_P);				// set as input
-			data = DB_PIN5_PIN & (1<<DB_PIN5_P);		// read port and mask pin
-			break;
-
 		case 6:
 			DB_PIN6_DDR &= ~(1<<DB_PIN6_P);				// set as input
 			data = DB_PIN6_PIN & (1<<DB_PIN6_P);		// read port and mask pin
-			break;
-
-		case 8:
-			DB_PIN8_DDR &= ~(1<<DB_PIN8_P);				// set as input
-			data = DB_PIN8_PIN & (1<<DB_PIN8_P);		// read port and mask pin
-			break;
-
-		case 10:
-			DB_PIN10_DDR &= ~(1<<DB_PIN10_P);				// set as input
-			data = DB_PIN10_PIN & (1<<DB_PIN10_P);		// read port and mask pin
-			break;
-
-		case 11:
-			DB_PIN11_DDR &= ~(1<<DB_PIN11_P);				// set as input
-			data = DB_PIN11_PIN & (1<<DB_PIN11_P);		// read port and mask pin
-			break;
-
-		case 12:
-			DB_PIN12_DDR &= ~(1<<DB_PIN12_P);				// set as input
-			data = DB_PIN12_PIN & (1<<DB_PIN12_P);		// read port and mask pin
-			break;
-
-		case 13:
-			DB_PIN13_DDR &= ~(1<<DB_PIN13_P);				// set as input
-			data = DB_PIN13_PIN & (1<<DB_PIN13_P);		// read port and mask pin
 			break;
 	}
 
@@ -165,7 +105,7 @@ void dev_debug_read_pin()
 
 /*
  * Command 0x40 -  Set IO PIN LOW
- * DEV 0x40 PIN. PIN: 2-13
+ * DEV 0x40 0x01 PIN. PIN: 2,3,6
  */
 void dev_debug_set_pin_low()
 {
@@ -186,46 +126,16 @@ void debug_set_pin_low(uint8_t pin)
 			DB_PIN3_PORT &= ~(1<<DB_PIN3_P);			// set pin LOW
 			break;
 
-		case 5:
-			DB_PIN5_DDR |= (1<<DB_PIN5_P);				// set as output
-			DB_PIN5_PORT &= ~(1<<DB_PIN5_P);			// set pin LOW
-			break;
-
 		case 6:
 			DB_PIN6_DDR |= (1<<DB_PIN6_P);				// set as output
 			DB_PIN6_PORT &= ~(1<<DB_PIN6_P);			// set pin LOW
-			break;
-
-		case 8:
-			DB_PIN8_DDR |= (1<<DB_PIN8_P);				// set as output
-			DB_PIN8_PORT &= ~(1<<DB_PIN8_P);			// set pin LOW
-			break;
-
-		case 10:
-			DB_PIN10_DDR |= (1<<DB_PIN10_P);				// set as output
-			DB_PIN10_PORT &= ~(1<<DB_PIN10_P);			// set pin LOW
-			break;
-
-		case 11:
-			DB_PIN11_DDR |= (1<<DB_PIN11_P);				// set as output
-			DB_PIN11_PORT &= ~(1<<DB_PIN11_P);			// set pin LOW
-			break;
-
-		case 12:
-			DB_PIN12_DDR |= (1<<DB_PIN12_P);				// set as output
-			DB_PIN12_PORT &= ~(1<<DB_PIN12_P);			// set pin LOW
-			break;
-
-		case 13:
-			DB_PIN13_DDR |= (1<<DB_PIN13_P);				// set as output
-			DB_PIN13_PORT &= ~(1<<DB_PIN13_P);			// set pin LOW
 			break;
 	}
 }
 
 /*
- * Command 0x40 -  Set IO PIN LOW
- * DEV 0x40 PIN. PIN: 2-13
+ * Command 0x41 -  Set IO PIN HIGH
+ * DEV 0x41 0x01 PIN. PIN: 2,3,6
  */
 void dev_debug_set_pin_high()
 {
@@ -246,39 +156,9 @@ void debug_set_pin_high(uint8_t pin)
 			DB_PIN3_PORT |= (1<<DB_PIN3_P);			// set pin HIGH
 			break;
 
-		case 5:
-			DB_PIN5_DDR |= (1<<DB_PIN5_P);			// set as output
-			DB_PIN5_PORT |= (1<<DB_PIN5_P);			// set pin HIGH
-			break;
-
 		case 6:
 			DB_PIN6_DDR |= (1<<DB_PIN6_P);			// set as output
 			DB_PIN6_PORT |= (1<<DB_PIN6_P);			// set pin HIGH
-			break;
-
-		case 8:
-			DB_PIN8_DDR |= (1<<DB_PIN8_P);			// set as output
-			DB_PIN8_PORT |= (1<<DB_PIN8_P);			// set pin HIGH
-			break;
-
-		case 10:
-			DB_PIN10_DDR |= (1<<DB_PIN10_P);			// set as output
-			DB_PIN10_PORT |= (1<<DB_PIN10_P);			// set pin HIGH
-			break;
-
-		case 11:
-			DB_PIN11_DDR |= (1<<DB_PIN11_P);			// set as output
-			DB_PIN11_PORT |= (1<<DB_PIN11_P);			// set pin HIGH
-			break;
-
-		case 12:
-			DB_PIN12_DDR |= (1<<DB_PIN12_P);			// set as output
-			DB_PIN12_PORT |= (1<<DB_PIN12_P);			// set pin HIGH
-			break;
-
-		case 13:
-			DB_PIN13_DDR |= (1<<DB_PIN13_P);			// set as output
-			DB_PIN13_PORT |= (1<<DB_PIN13_P);			// set pin HIGH
 			break;
 	}
 }
@@ -309,6 +189,7 @@ void dev_pulse_pin(uint8_t pin, uint8_t time)
 /*
  * Command 0xA0 -  Pulse PIN P for N ms
  * DEV 0xA0 0x02 PIN MS
+ * PIN: 2,3,6
  */
 void dev_debug_pulse_pin()
 {
@@ -330,21 +211,16 @@ void dev_adc_trigger(uint8_t chan)
 {
 	// Set Vref and data format.
 	switch(debug_adc_vref) {
-		case DB_VREF_1_1:
-			ADMUX = (1<<REFS1)|(0<<REFS0)|(chan & 0x07);	// Internal Vref = 1.1v, Left Adj, lower 3 bits select channel.
-			break;
-		case DB_VREF_EXT:
-			ADMUX = (0<<REFS1)|(1<<REFS0)|(chan & 0x07);	// Vref = Ext, Left Adj, lower 3 bits select channel.
+		case DB_VREF_2_56:
+			ADMUX = (1<<REFS2)|(1<<REFS1)|(0<<REFS0)|(1<<ADLAR)|(chan & 0x07);	// Internal Vref = 2.56v, Left Adj, lower 3 bits select channel.
 			break;
 		case DB_VREF_VCC:
 		default:
-			ADMUX = (0<<REFS1)|(0<<REFS0)|(chan & 0x07);	// Internal Vref = Vcc, Left Adj, lower 3 bits select channel.
+			ADMUX = (0<<REFS2)|(0<<REFS1)|(0<<REFS0)|(1<<ADLAR)|(chan & 0x07);	// Internal Vref = Vcc, Left Adj, lower 3 bits select channel.
 			break;
 	}
 	// Enable ADC, set clock rate
 	ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(0<<ADPS0);	// ADC Enable, CPU/64 clock (8MHz => 125kHz or ~120us/sample)
-	// Set control
-	ADCSRB = (1<<ADLAR);
 
 	// trigger ADC sample.
 	ADCSRA |= (1<<ADSC);		// trigger
@@ -366,9 +242,10 @@ void dev_adc_trigger(uint8_t chan)
 /*
  * Command 0x70 -  Read ADC Channel
  * DEV 0x70 0x01 CHAN
+ * CHAN: 2,3
  * Loads output FIFO with ADC channel data.
  *
- * NOTE: ADC4 and ADC6 are used by the I2C interface.
+ * NOTE: ADC0 and ADC1 are used by the I2C interface.
  */
 void dev_debug_get_adc()
 {
@@ -385,19 +262,11 @@ void dev_debug_set_vref_vcc()
 }
 
 /*
- * Command 0x79 - Set Vref to Internal 1.1v
+ * Command 0x7B - Set Vref to 2.56
  */
-void dev_debug_set_vref_1_1()
+void dev_debug_set_vref_2_56()
 {
-	debug_adc_vref = DB_VREF_1_1;
-}
-
-/*
- * Command 0x7A - Set Vref to Ext
- */
-void dev_debug_set_vref_ext()
-{
-	debug_adc_vref = DB_VREF_EXT;
+	debug_adc_vref = DB_VREF_2_56;
 }
 
 /*

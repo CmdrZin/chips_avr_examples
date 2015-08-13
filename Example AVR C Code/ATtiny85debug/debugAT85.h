@@ -1,7 +1,7 @@
 /*
- * debugAT84.h
+ * debugAT85.h
  *
- * Created: 6/8/2015 9:54:55 PM
+ * Created: 7/11/2015 11:40:55 PM
  *  Author: Chip
  */ 
 
@@ -11,7 +11,7 @@
 
 #define DEV_DEBUG_ID 255
 
-typedef enum { DB_VREF_VCC, DB_VREF_1_1, DB_VREF_EXT } DEBUG_VREF;
+typedef enum { DB_VREF_VCC, DB_VREF_2_56 } DEBUG_VREF;
 
 void dev_debug_init();
 void dev_debug_service();
@@ -23,8 +23,7 @@ void debug_set_pin_high(uint8_t pin);
 
 void dev_debug_get_adc();
 void dev_debug_set_vref_vcc();
-void dev_debug_set_vref_1_1();
-void dev_debug_set_vref_ext();
+void dev_debug_set_vref_2_56();
 
 void dev_debug_pulse_pin();
 
