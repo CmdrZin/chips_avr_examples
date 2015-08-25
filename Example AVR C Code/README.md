@@ -16,3 +16,4 @@ These are hardware interfaces written in C.
 |Systimer | Systimer re-written in C.|
 |Twi_I2C | My I2C interface using TWI. Based on AVR app notes and examples.|
 |UpdatedUsiTwi_I2C | AVR312 app note I2C interface using USI. Updated for ATtiny84 and 85.|
+|DifferentialLED20 | Driver for 5 lines to drive 20 LEDs in C.|
