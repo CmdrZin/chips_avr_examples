@@ -12,6 +12,7 @@ These are hardware interfaces written in C.
 |KeyPad | 4x4 Key Pad scan interface.|
 |LED | Basic one LED control.|
 |PeriodCounter | A way to measure time between two external events using IPC.|
+|PWM DC Motor | A method to use PWM for DC motot control.|
 |Solenoid | A way to pulse a solenoid.|
 |Systimer | Systimer re-written in C.|
 |Twi_I2C | My I2C interface using TWI. Based on AVR app notes and examples.|
