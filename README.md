@@ -13,5 +13,6 @@ These are projects that use the chip_avr_asm_lib modules.
 |SumoBot_Code_Dev | Control of a Sumo Bot base using my LCD_CDM-16100 board.|
 |SumoBot_Maze | Control of a Sumo Bot base using Sumo Maze board.|
 |TankBot_Code_Dev | DC PWM motor control, Sonar and IR sensors.|
+|TankBotBare2Project | The full AVR Studio 6 development for phase 2 I2C slave.|
 |Example AVR Assembly Code | General examples of uncommon commands.|
 |Example AVR C Code | General examples of hardware drivers in C code.|
