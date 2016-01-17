@@ -1,7 +1,7 @@
 chips_avr_examples
 ==================
 
-These are projects that use the chip_avr_asm_lib modules.  
+These are projects that use the chip_avr_asm_lib and 'C' modules.  
 
 |        Name         | Description                                                |
 |---------------------|------------------------------------------------------------|
@@ -14,5 +14,6 @@ These are projects that use the chip_avr_asm_lib modules.
 |SumoBot_Maze | Control of a Sumo Bot base using Sumo Maze board.|
 |TankBot_Code_Dev | DC PWM motor control, Sonar and IR sensors.|
 |TankBotBare2Project | The full AVR Studio 6 development for phase 2 I2C slave.|
+|ImpactMonModelB | Impact display project using ADXL345 3D accelerometer.|
 |Example AVR Assembly Code | General examples of uncommon commands.|
 |Example AVR C Code | General examples of hardware drivers in C code.|

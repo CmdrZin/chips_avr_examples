@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Atmel Studio Solution File, Format Version 11.00
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "ImpactMonB", "ImpactMonB\ImpactMonB.cproj", "{38B42D00-3918-4FF6-84C6-777BDC2E90AE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|AVR = Debug|AVR
+		Release|AVR = Release|AVR
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{38B42D00-3918-4FF6-84C6-777BDC2E90AE}.Debug|AVR.ActiveCfg = Debug|AVR
+		{38B42D00-3918-4FF6-84C6-777BDC2E90AE}.Debug|AVR.Build.0 = Debug|AVR
+		{38B42D00-3918-4FF6-84C6-777BDC2E90AE}.Release|AVR.ActiveCfg = Release|AVR
+		{38B42D00-3918-4FF6-84C6-777BDC2E90AE}.Release|AVR.Build.0 = Release|AVR
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
