@@ -4,6 +4,8 @@
  * Created: 1/12/2016	0.01	ndp
  *  Author: Chip
  *
+ * Target: ATmega88A
+ *
  * This is the main() file for the EM 8x8 display board.
  * It contains the initialization call and the task scheduler loop.
  * Other than DEBUG code, no changes should be needed to this file.

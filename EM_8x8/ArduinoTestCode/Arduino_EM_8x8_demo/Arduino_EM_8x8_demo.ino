@@ -45,7 +45,7 @@ void loop()
   uint8_t row;
   
   // Send SET CMD to Slave.
-#if 0
+#if 1
   outBuff[0] = makeHeader( MES_SET_ICON_LEN-3 );
   outBuff[1] = MOD_EM_SERVICE_ID;
   outBuff[2] = MES_SET_ICON;
@@ -59,7 +59,7 @@ void loop()
 #endif
 
   // Send LOAD CMD to Slave.
-#if 1
+#if 0
   outBuff[0] = makeHeader( MES_LOAD_ICON_LEN-3 );
   outBuff[1] = MOD_EM_SERVICE_ID;
   outBuff[2] = MES_LOAD_ICON;
