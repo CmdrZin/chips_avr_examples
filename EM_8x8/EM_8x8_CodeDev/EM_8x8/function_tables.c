@@ -4,6 +4,7 @@
  * org: 08/08/2015					0.01	ndp
  * author: Nels "Chip" Pearson
  * revision: 01/12/2016				0.02	ndp
+ * revision: 02/01/2016				0.03	ndp	Added marquee support
  *
  * Dependent on:
  *	module function files
@@ -55,6 +56,11 @@ const MOD_FUNCTION_ENTRY mod_em_service_access[] PROGMEM =
 {
 	{ 0x01, mes_setIcon },
 	{ 0x02, mes_loadIcon },
+	{ 0x40, mes_selectMarquee},
+	{ 0x41, mes_setKerningFlag },
+	{ 0x42, mes_setContinuousFlag },
+	{ 0x43, mes_setRate },
+	{ 0x44, mes_setIconSeries },
 	{ 0, 0 }
 };
 

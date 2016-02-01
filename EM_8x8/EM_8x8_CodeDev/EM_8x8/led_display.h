@@ -1,8 +1,9 @@
 /*
  * led_display.h
  *
- * Created: 1/13/2016 1:04:23 PM
+ * Created: 1/13/2016	0.01	ndp
  *  Author: Chip
+ * revision: 2/01/2016	0.02	ndp	Added support for Marquee scroll.
  */ 
 
 
@@ -13,5 +14,6 @@ void ld_init();
 void ld_service();
 void ld_loadIcon( uint16_t val, uint8_t b );
 void ld_directLoadIcon( uint8_t *buff );
+uint8_t ld_getFramesDisplayed();
 
 #endif /* LED_DISPLAY_H_ */

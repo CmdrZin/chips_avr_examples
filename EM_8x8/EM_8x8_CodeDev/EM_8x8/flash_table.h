@@ -11,6 +11,7 @@
 #ifndef FLASH_TABLE_H_
 #define FLASH_TABLE_H_
 
+#include "sysdefs.h"
 
 uint8_t flash_get_mod_access_id(uint8_t index);
 MOD_FUNCTION_ENTRY* flash_get_mod_function_table(uint8_t index);

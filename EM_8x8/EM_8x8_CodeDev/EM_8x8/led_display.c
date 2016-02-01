@@ -1,8 +1,9 @@
 /*
  * led_display.c
  *
- * Created: 1/13/2016 1:04:08 PM
+ * Created: 1/13/2016	0.01	ndp
  *  Author: Chip
+ * revision: 2/01/2016	0.02	ndp	Added support for Marquee scroll.
  *
  * This module manages the LED 8x8 display.
  * It will pull data from one of the two buffers an display one column at a time
@@ -27,6 +28,7 @@ uint8_t		buffer;					// buffer selection. 0 or 1
 uint8_t		row;
 uint8_t		ld_delay;
 uint8_t		ld_row_pat;				// current row select pattern for column data displayed.
+uint8_t		frames_displayed;		// number of frames the last icon has been displayed.
 
 /*
  *
@@ -42,6 +44,7 @@ void ld_init()
 	// initialize variables
 	buffer = 0;
 	row = 0;
+	frames_displayed = 0;
 }
 
 /*
@@ -63,8 +66,10 @@ void ld_service()
 		ld_delay = LD_DELAY_COUNT;		// reload
 		if(row == 8)
 		{
+			// Finished display. Load a new one.
 			current_buffer = buffer;
 			row = 0;
+			++frames_displayed;
 		}
 
 		ld_row_pat = 1 << row;								// active HIGH
@@ -101,6 +106,8 @@ void ld_loadIcon( uint16_t val, uint8_t b )
 	buffer = index;
 
 	flash_copy8( val, icons, displayBuffer[index] );
+
+	frames_displayed = 0;
 }
 
 /*
@@ -122,5 +129,14 @@ void ld_directLoadIcon( uint8_t *buff )
 	{
 		displayBuffer[buffer][i] = buff[i];
 	}
+
+	frames_displayed = 0;
 }
-	
+
+/*
+ * Get frames displayed.
+ */
+uint8_t ld_getFramesDisplayed()
+{
+	return( frames_displayed );
+}
