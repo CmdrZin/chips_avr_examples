@@ -18,3 +18,4 @@ These are projects that use the chip_avr_asm_lib and 'C' modules.
 |EM_8x8 | An 8x8 Emote Module to give a robot character.|
 |Example AVR Assembly Code | General examples of uncommon commands.|
 |Example AVR C Code | General examples of hardware drivers in C code.|
+|3pi_Pololu_C_Code_Dev | General examples of 3pi drivers in C code.|
