@@ -38,7 +38,7 @@
 //#define				GPIOR02
 //#define				GPIOR03
 // 100ms tic flags
-#define	DEV_100MS_TIC	4
+#define	DEV_10MS_TIC	4
 //#define				GPIOR05
 //#define				GPIOR06
 //#define				GPIOR07

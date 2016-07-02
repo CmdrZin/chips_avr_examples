@@ -36,8 +36,12 @@
 
 typedef enum { DEV_BUTTON_A, DEV_BUTTON_B, DEV_BUTTON_C } DEV_BUTTON;
 
-void db_init();
+void dev_buttons_init();
 
-uint8_t dev_button_isDown( DEV_BUTTON button );
+bool dev_button_isDown( DEV_BUTTON button );
+bool dev_button_raw( DEV_BUTTON button );
+
+void dev_buttons_service();
+
 
 #endif /* IOBUTTONS_H_ */

@@ -29,17 +29,23 @@
  */
 
 #include <avr/io.h>
+#include <avr/interrupt.h>
 
+#include "sysTimer.h"
 #include "dev_leds.h"
+#include "dev_buttons.h"
 
 uint16_t count = 0;
 
 int main()
 {
+	st_init_tmr0();
 	dev_leds_init();
+
+	sei();				// Enable interrupts
 	
 	// Initial tests
-	while( count == 0 )
+	while( count <= 61000 )
 	{
 		++count;
 		
@@ -61,9 +67,33 @@ int main()
 		}
 	}
 
+	while(1)
+	{
+		dev_buttons_service();
 
+		if( dev_button_isDown( DEV_BUTTON_C ) )
+		{
+			dev_red_led(true);
+		}
+		else
+		{
+			dev_red_led(false);
+		}
 
+		if( dev_button_raw( DEV_BUTTON_B ) )
+		{
+			dev_grn_led(true);
+		}
+		else
+		{
+			dev_grn_led(false);
+		}
 
-
-
+		// Crude delay.
+		while( count <= 64000 )
+		{
+			++count;
+		}
+		count = 0;
+	}
 }

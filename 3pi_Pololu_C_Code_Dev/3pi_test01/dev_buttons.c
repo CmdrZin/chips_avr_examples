@@ -21,16 +21,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * io7SegLedsButtons.c
+ * dev_buttons.c
  *
- * Created: 11/25/2015		0.01	ndp
+ * Created: 06/28/2016		0.01	ndp
  *  Author: Chip
  */ 
 
 #include <avr/io.h>
+#include "sysTimer.h"
 
 #include "dev_buttons.h"
 
+#define DEV_BUTTON_TIME		10
 
 #define DEV_BUTTON_A_PORT	PORTB
 #define DEV_BUTTON_A_DDR	DDRB
@@ -45,91 +47,185 @@
 #define DEV_BUTTON_C_PORT	PORTB
 #define DEV_BUTTON_C_DDR	DDRB
 #define DEV_BUTTON_C_PIN	PINB
-#define DEV_BUTTON_C_P		PORTB1
+#define DEV_BUTTON_C_P		PORTB5
 
+#define DEV_BUTTON_A_FLAG	0b00000001		// state returned
+#define DEV_BUTTON_B_FLAG	0b00000010		// state returned
+#define DEV_BUTTON_C_FLAG	0b00000100		// state returned
 
-uint8_t db_status;	// button status.
+#define DEV_BUTTON_A_HIST	0b00010000		// set until released
+#define DEV_BUTTON_B_HIST	0b00100000		// set until released
+#define DEV_BUTTON_C_HIST	0b01000000		// set until released
+
+uint8_t dev_button_status;					// button status.
+uint8_t dev_button_delay;
 
 /*
- * io_init()
+ * dev_buttons_init()
  *
- * Initialize IO for LEDs and Buttons
+ * Initialize I/O for Buttons
  *
  */
-void idl_init()
+void dev_buttons_init()
 {
-	IO_BUTTON_A_DDR &= ~(1<<IO_BUTTON_A_P);			// Set as INPUT
-	IO_BUTTON_A_PORT |= (1<<IO_BUTTON_A_P);			// Enable internal Pull-Up
+	DEV_BUTTON_A_DDR &= ~(1<<DEV_BUTTON_A_P);			// Set as INPUT
+	DEV_BUTTON_A_PORT |= (1<<DEV_BUTTON_A_P);			// Enable internal Pull-Up
 	
-	IO_BUTTON_B_DDR &= ~(1<<IO_BUTTON_B_P);			// Set as INPUT
-	IO_BUTTON_B_PORT |= (1<<IO_BUTTON_B_P);			// Enable internal Pull-Up
+	DEV_BUTTON_B_DDR &= ~(1<<DEV_BUTTON_B_P);			// Set as INPUT
+	DEV_BUTTON_B_PORT |= (1<<DEV_BUTTON_B_P);			// Enable internal Pull-Up
 
-	IO_BUTTON_C_DDR &= ~(1<<IO_BUTTON_C_P);			// Set as INPUT
-	IO_BUTTON_C_PORT |= (1<<IO_BUTTON_C_P);			// Enable internal Pull-Up
+	DEV_BUTTON_C_DDR &= ~(1<<DEV_BUTTON_C_P);			// Set as INPUT
+	DEV_BUTTON_C_PORT |= (1<<DEV_BUTTON_C_P);			// Enable internal Pull-Up
 
-	db_status = 0;
+	dev_button_status = 0;
+	dev_button_delay = DEV_BUTTON_TIME;
 }
 
 
 /* 
- * Is <num> button pressed?
- * Return 0:False  1:True..first read  2:True..still down.
+ * Was button pressed?
+ * button = 0..2 for A..C
+ * Return 0:False  1:True..first read only, reset flag
  */
 
-uint8_t dev_button_isDown( DEV_BUTTON button );
-
-#if 0
-/*
- * Service display
- */
-void idl_service()
+bool dev_button_isDown( DEV_BUTTON button )
 {
-	if( GPIOR0 & (1<<DEV_100MS_TIC) )
+	switch( button )
 	{
-		GPIOR0 &= ~(1<<DEV_100MS_TIC);				// clear flag
-		if( --idl_delay == 0 )
-		{
-			idl_delay = IDL_DIGIT_TIME;
-
-			switch( idl_mode )
+		case DEV_BUTTON_A:
+			if( dev_button_status & DEV_BUTTON_A_FLAG )
 			{
-				case IDL_OFF:
-					idl_displayDigit( 0, IDL_OFF );
-					break;
-				
-				case IDL_DL1:
-					idl_displayDigit( idl_val1, IDL_DL1 );
-					idl_mode = IDL_DL2;
-					break;
-					
-				case IDL_DL2:
-					idl_displayDigit( idl_val2, IDL_DL2 );
-					idl_mode = IDL_DL1;
-					break;
-					
-				default:
-					idl_mode = IDL_OFF;
-					break;
+				dev_button_status &= ~DEV_BUTTON_A_FLAG;		// clear flag.
+				return true;
+			}
+			break;
+
+		case DEV_BUTTON_B:
+			if( dev_button_status & DEV_BUTTON_B_FLAG )
+			{
+				dev_button_status &= ~DEV_BUTTON_B_FLAG;		// clear flag.
+				return true;
+			}
+			break;
+
+		case DEV_BUTTON_C:
+			if( dev_button_status & DEV_BUTTON_C_FLAG )
+			{
+				dev_button_status &= ~DEV_BUTTON_C_FLAG;		// clear flag.
+				return true;
+			}
+			break;
+	}
+	
+	return false;
+}
+
+
+/*
+ * Was <num> button still pressed?
+ * button = 0..2 for A..C
+ * Return 0:False  1:True..first read only, reset flag
+ */
+bool dev_button_raw( DEV_BUTTON button )
+{
+	switch( button )
+	{
+		case DEV_BUTTON_A:
+			if( dev_button_status & DEV_BUTTON_A_HIST )
+			{
+				return true;
+			}
+			break;
+
+		case DEV_BUTTON_B:
+			if( dev_button_status & DEV_BUTTON_B_HIST )
+			{
+				return true;
+			}
+			break;
+
+		case DEV_BUTTON_C:
+			if( dev_button_status & DEV_BUTTON_C_HIST )
+			{
+				return true;
+			}
+			break;
+	}
+	
+	return false;
+}
+
+
+/*
+ * Service buttons
+ * Scan buttons every 100 ms.
+ * If button
+ */
+void dev_buttons_service()
+{
+	if( GPIOR0 & (1<<DEV_10MS_TIC) )
+	{
+		GPIOR0 &= ~(1<<DEV_10MS_TIC);				// clear flag
+		if( --dev_button_delay == 0 )
+		{
+			dev_button_delay = DEV_BUTTON_TIME;
+
+			if( !(DEV_BUTTON_A_PIN & (1<<DEV_BUTTON_A_P)) )		// Pressed?
+			{
+				// Is it still pressed?
+				if( dev_button_status & DEV_BUTTON_A_HIST )
+				{
+					// yes..do nothing
+				}
+				else
+				{
+					// set both FLAG and HIST
+					dev_button_status |= DEV_BUTTON_A_FLAG | DEV_BUTTON_A_HIST;
+				}
+			}
+			else
+			{
+				// Released..clear HIST. FLAG is cleared when read.
+					dev_button_status &= ~DEV_BUTTON_A_HIST;
+			}
+
+			if( !(DEV_BUTTON_B_PIN & (1<<DEV_BUTTON_B_P)) )		// Pressed?
+			{
+				// Is it still pressed?
+				if( dev_button_status & DEV_BUTTON_B_HIST )
+				{
+					// yes..do nothing
+				}
+				else
+				{
+					// set both FLAG and HIST
+					dev_button_status |= DEV_BUTTON_B_FLAG | DEV_BUTTON_B_HIST;
+				}
+			}
+			else
+			{
+				// Released..clear HIST. FLAG is cleared when read.
+				dev_button_status &= ~DEV_BUTTON_B_HIST;
+			}
+
+			if( !(DEV_BUTTON_C_PIN & (1<<DEV_BUTTON_C_P)) )		// Pressed?
+			{
+				// Is it still pressed?
+				if( dev_button_status & DEV_BUTTON_C_HIST )
+				{
+					// yes..do nothing
+				}
+				else
+				{
+					// set both FLAG and HIST
+					dev_button_status |= DEV_BUTTON_C_FLAG | DEV_BUTTON_C_HIST;
+				}
+			}
+			else
+			{
+				// Released..clear HIST. FLAG is cleared when read.
+				dev_button_status &= ~DEV_BUTTON_C_HIST;
 			}
 		}
 	}
-}
-#endif
-
-
-/*
- * Scan UP and DOWN buttons.
- * b1:UP, b0:DOWN	0:open, 1:closed
- */
-uint8_t idl_scanButtons()
-{
-	uint8_t result = 0;
-	
-	if( !(IO_BUTTON_DN_PIN & (1<<IO_BUTTON_DN_P)) )		// test for GND (pressed)
-		result |= 0x01;
-		
-	if( !(IO_BUTTON_UP_PIN & (1<<IO_BUTTON_UP_P)) )
-	result |= 0x02;
-
-	return( result );
 }

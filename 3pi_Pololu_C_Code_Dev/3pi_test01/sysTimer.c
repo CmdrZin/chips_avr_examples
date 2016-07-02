@@ -26,8 +26,9 @@
  *
  * System Timer Utility
  *
- * Created: 5/19/2015 12:26:01 PM
+ * Created: 5/19/2015		ndp		0.1
  * Author: Chip
+ * revision:	7/01/2016	ndp		0.02	change to 20MHz
  */ 
 
 #include <avr/io.h>
@@ -35,12 +36,12 @@
 
 #include "sysTimer.h"
 
-#define SLOW_TIC		100			// 1ms * N for the slow tic
+#define SLOW_TIC		10		// 1ms * N for the slow tic
 
 uint8_t	st_cnt_ms;				// secondary timer counter.
 
 /*
- * Set up Timer0 to generate System Time Tic for 1 ms using 8MHz CPU clock
+ * Set up Timer0 to generate System Time Tic for 1 ms using 20MHz CPU clock
  * Call this once after RESET.
  *
  * Modifies: OCR0A, TCCR0A, TIMSK0, TCCR0B, and GPIOR0
@@ -53,13 +54,13 @@ uint8_t	st_cnt_ms;				// secondary timer counter.
  */
 void st_init_tmr0()
 {
-	OCR0A = 124;		// 1ms = 8000000 / 8000 / 2 -> [2 * 64 * (1 + OCR0A)] : 128 * (125) -> OCR0A = 124
+	OCR0A = 77;			// 1ms = 20,000,000 / 20,000 / 2 -> 40,000 -> [2 * 256 * (1 + OCR0A)] : 512 * (78) -> OCR0A = 77
 	
 	TCCR0A = (1<<WGM01);
 
 	TIMSK0 = (1<<OCIE0A);		// enable counter 0 OCO interrupt
 
-	TCCR0B =  0b011;			// CPU div 64
+	TCCR0B =  0b100;			// CPU div 256
 
 	st_cnt_ms = SLOW_TIC;
 
