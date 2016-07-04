@@ -23,6 +23,9 @@
  *
  * 3pi_test01 - an application for the Pololu 3pi Robot
  *
+ * This application uses the Pololu AVR C/C++ Library.  For help, see:
+ * -User's guide: http://www.pololu.com/docs/0J20
+ * -Command reference: http://www.pololu.com/docs/0J18
  *
  * Created: 6/26/2016 2:12:25 PM
  *  Author: Chip
@@ -36,6 +39,8 @@
 #include "dev_buttons.h"
 #include "lcd_hdm16216h_5.h"
 
+#include <pololu/3pi.h>
+
 
 uint16_t count = 0;
 
@@ -43,7 +48,7 @@ int main()
 {
 	st_init_tmr0();
 	dev_leds_init();
-	lcd_init();
+//	lcd_init();
 
 	sei();				// Enable interrupts
 	
@@ -72,10 +77,16 @@ int main()
 	}
 #endif
 
+	clear();
+
 	while(1)
 	{
-		lcd_ram_write(0x43>>4);
-		lcd_ram_write(0x43);
+//		lcd_ram_write(0x43>>4);
+//		lcd_ram_write(0x43);
+		lcd_goto_xy(0,0);
+		print_long(read_battery_millivolts_3pi());
+		lcd_goto_xy(0,1);
+		print_hex_byte(0xa5);
 
 		// Crude delay.
 		while( count <= 64000 )
