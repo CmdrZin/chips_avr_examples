@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Atmel Studio Solution File, Format Version 11.00
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "LCD_SlaveInC", "LCD_SlaveInC.cproj", "{C83AC086-BECB-425B-A547-5C31FDE3FE8E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|AVR = Debug|AVR
+		Release|AVR = Release|AVR
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C83AC086-BECB-425B-A547-5C31FDE3FE8E}.Debug|AVR.ActiveCfg = Debug|AVR
+		{C83AC086-BECB-425B-A547-5C31FDE3FE8E}.Debug|AVR.Build.0 = Debug|AVR
+		{C83AC086-BECB-425B-A547-5C31FDE3FE8E}.Release|AVR.ActiveCfg = Release|AVR
+		{C83AC086-BECB-425B-A547-5C31FDE3FE8E}.Release|AVR.Build.0 = Release|AVR
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
