@@ -21,3 +21,4 @@ These are projects that use the chip_avr_asm_lib and 'C' modules.
 |Example AVR C Code | General examples of hardware drivers in C code.|
 |3pi_Pololu_C_Code_Dev | General examples of 3pi drivers in C code.|
 |LCD_ControlPanelSlaveInC | Revised LCD I2C Slave in C code.|
+|AnimatronicFaceBoard | Animated Face development board in C code.|
