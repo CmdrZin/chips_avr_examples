@@ -1,8 +1,31 @@
 /*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2016 Nels D. "Chip" Pearson (aka CmdrZin)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
  * twi_I2CMaster.c
  *
- * Created: 8/27/2015 3:30:32 PM
+ * Created: 8/27/2015	0.01	ndp
  *  Author: Chip
+ * Revised:	01/26/2017	0.02	ndp		SDA_R bug fix and SDA_W data NAK fix.
  */ 
 
 
@@ -32,7 +55,7 @@
 #define TWI_BUS_ERROR              0x00  // Bus error due to an illegal START or STOP condition
 
 
-#define TWI_MASTER_BUFF_SIZE	8
+#define TWI_MASTER_BUFF_SIZE	16
 
 uint8_t timTxBuffer[TWI_MASTER_BUFF_SIZE];
 uint8_t timTxBufferBytes;
@@ -42,12 +65,17 @@ uint8_t timRxBuffer[TWI_MASTER_BUFF_SIZE];
 uint8_t timRxBufferBytes;
 uint8_t timRxBufferPtr;
 
-bool	timBusy;
+volatile bool	timBusy;
 
 void tim_init()
 {
-	TWBR = 32;				// 32=8MHz->100kHz, 2 8MHz->400kHz
+	TWBR = 90;				// 90=20MHz->100k, 32=8MHz->100kHz, 2 8MHz->400kHz
+//	TWBR = 2;				// 32=8MHz->100kHz, 2 8MHz->400kHz
 	timBusy = false;
+// DEBUG++
+//	DDRD |= (1<<PORTD0);	// set as OUTPUT
+//	PORTD &= ~(1<<PORTD0);	// set LOW
+// DEBUG--
 }
 
 void tim_write( uint8_t sla, uint8_t* buffer, uint8_t nbytes )
@@ -64,6 +92,9 @@ void tim_write( uint8_t sla, uint8_t* buffer, uint8_t nbytes )
 	TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWSTA);		// Initiate a START condition.
 	
 	timBusy = true;
+// DEBUG++
+//	PORTD |= (1<<PORTD0);	// set HIGH
+// DEBUG--
 }
 
 bool tim_isBusy()
@@ -82,6 +113,9 @@ void tim_read( uint8_t sla, uint8_t nbytes )
 	TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWSTA);		// Initiate a START condition.
 
 	timBusy = true;
+// DEBUG++
+//	PORTD |= (1<<PORTD0);	// set HIGH
+// DEBUG--
 }
 
 bool tim_hasData()
@@ -123,30 +157,40 @@ ISR( TWI_vect )
 				TWCR = (1<<TWEN)|(1<<TWINT)|(1<<TWSTO);	// Disable TWI Interrupt and clear the flag
 														// Initiate a STOP condition.
 				timBusy = false;
+// DEBUG++
+//				PORTD &= ~(1<<PORTD0);	// set LOW
+// DEBUG--
 			}
 			break;
 
 		case TWI_MRX_ADR_ACK:				// SLA+R has been transmitted and ACK received
 			timRxBufferPtr = 0;				// Set buffer pointer start
-			if (timRxBufferPtr < timRxBufferBytes )		// Check for zero read.
+			if ( (timRxBufferBytes == 0 ) || (timRxBufferPtr < (timRxBufferBytes-1)) )		// Check for zero read or last byte to read.
 			{
-				TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWEA);
+				TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWEA);		// Set to recv data.
 			}
 			else
 			{
 				TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT);		// NACK
+// DEBUG++
+//				PORTD &= ~(1<<PORTD0);	// set LOW
+// DEBUG--
 			}
 			break;
 			
-		case TWI_MRX_DATA_ACK:				// Data byte has been received and ACK traNsmitted
-		    timRxBuffer[timRxBufferPtr++] = TWDR;
-			if (timRxBufferPtr < timRxBufferBytes-1 )		// Detect the last byte to NACK it.
+		case TWI_MRX_DATA_ACK:				// Data byte has been received and ACK transmitted
+		    timRxBuffer[timRxBufferPtr] = TWDR;
+			++timRxBufferPtr;
+			if (timRxBufferPtr < (timRxBufferBytes-1) )		// Detect the last byte to NACK it.
 			{
-				TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWEA);
+				TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWEA);		// Set to recv data.
 		    }
 			else
 			{
 				TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT);		// NACK
+// DEBUG++
+//				PORTD &= ~(1<<PORTD0);	// set LOW
+// DEBUG--
 			}
 			break;
 			
@@ -154,10 +198,17 @@ ISR( TWI_vect )
 			timRxBuffer[timRxBufferPtr++] = TWDR;
 			TWCR = (1<<TWEN)|(1<<TWINT)|(1<<TWSTO);	// Initiate a STOP condition.
 			timBusy = false;
+// DEBUG++
+//			PORTD &= ~(1<<PORTD0);	// set LOW
+// DEBUG--
 			break;
 			
 		case TWI_ARB_LOST:						// Arbitration lost
 			TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWSTA);	// Initiate a (RE)START condition.
+			timBusy = false;
+// DEBUG++
+//			PORTD &= ~(1<<PORTD0);	// set LOW
+// DEBUG--
 		    break;
 			
 		case TWI_MTX_ADR_NACK:		// SLA+W has been transmitted and NACK received
@@ -165,8 +216,11 @@ ISR( TWI_vect )
 		case TWI_MTX_DATA_NACK:		// Data byte has been transmitted and NACK received
 		case TWI_BUS_ERROR:			// Bus error due to an illegal START or STOP condition
 		default:
-		    // Reset TWI Interface
-			TWCR = (1<<TWEN);
+			TWCR = (1<<TWEN)|(1<<TWINT)|(1<<TWSTO);	// Initiate a STOP condition. Try this..Much better.
 			timBusy = false;
+// DEBUG++
+//			PORTD &= ~(1<<PORTD0);	// set LOW
+// DEBUG--
+			break;
 	}
 }
