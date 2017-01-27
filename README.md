@@ -9,6 +9,7 @@ These are projects that use the chip_avr_asm_lib and 'C' modules.
 |I2C_Slave_Code_Dev/I2C_Logger | Slave code Logger example.|
 |I2C_Slave_Code_Dev/I2C_SlaveCore | Slave Core code example with Arduino Master.|
 |USI_I2C_Slave | 'C' code AVR312_Slave code example with Arduino Master.|
+|USI_I2C_Slave_NonIntr | 'C' code I2C Slave code for ATtiny85 that doesn't use interrupts.|
 |R2_Comm_Link | Audio communications using Dual Tones and Goertiz tone detection.|
 |SumoBot_Code_Dev | Control of a Sumo Bot base using my LCD_CDM-16100 board.|
 |SumoBot_Maze | Control of a Sumo Bot base using Sumo Maze board.|
