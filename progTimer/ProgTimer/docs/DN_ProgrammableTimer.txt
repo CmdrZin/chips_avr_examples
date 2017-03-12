@@ -1,0 +1,198 @@
+DN_ProgrammableTimer.txt
+30jan17 ndp
+05mar17
+
+
+Design Notes for Programmable Timer board
+
+ref1: ATtiny328PA datasheet
+ref2: RD_ProgrammableTimer.txt
+
+Target: ATmega328PA-AU (TQFP-32), 1 MHz, 9600 baud
+2032/2025 20mm coin cell 3V or Tripple AAA batterry pack (3.6V/4.5V)
+
+Normally in IDLE mode (0.05ma). Wake-up on Watch Dog (8s) or USART Rx Intr.
+EEPROM (1k bytes) holds RTC and Event List.
+RS232 COM Port (FTDI/USB) 9600 8N1 no handshake (but available).
+
+Two LEDs (RED and GREEN).
+Two Push Button Switches (A & B).
+Buzzer (4-5kHz) with mute switch.
+Use straight instead of right angle for FTDI. Have to disassemble case to 
+connect USB/FTDI serial module program events.
+
+TQFP is fine line, tricky, but not impossble.
+
+Buzzer: PS Series, PS12 (4-5kHz, 3V)..Use PWM.
+
+TIME FORMAT
+31,536,000 (01 E1 33 80) minutes per year
+Total seconds from Midnight Jan 1 2000
+Use <time.h>
+typedef uint32_t time_t;
+and
+    struct tm {
+        int8_t          tm_sec; /**< seconds after the minute - [ 0 to 59 ] */
+        int8_t          tm_min; /**< minutes after the hour - [ 0 to 59 ] */
+        int8_t          tm_hour; /**< hours since midnight - [ 0 to 23 ] */
+        int8_t          tm_mday; /**< day of the month - [ 1 to 31 ] */
+        int8_t          tm_wday; /**< days since Sunday - [ 0 to 6 ] */
+        int8_t          tm_mon; /**< months since January - [ 0 to 11 ] */
+        int16_t         tm_year; /**< years since 1900 */
+        int16_t         tm_yday; /**< days since January 1 - [ 0 to 365 ] */
+        int16_t         tm_isdst; /**< Daylight Saving Time flag */
+    };
+Use IsoTime format:	YYYY-MM-DD HH:MM:SS (19 char)
+	2013-03-23 01:03:52
+
+COMMANDS
+'L'	Load list item into RAM. Index: 0-249 (Have 2k RAM. Can store entire list.)
+	L <Index> YYYY-MM-DD HH:MM:SN
+Example: (21 bytes) Store 2013-03-23 01:03:50 with Note 2 at index 30.
+'L' 1E '2' '0' '1' '3' '-' '0' '3' '-' '2' '3' ' ' '0' '1' ':' '0' '3' ':' '5' '2'
+Returns 'O' 'K' 0A 0D if accepted or '?' 0A 0D if not.
+Converts ASCII into time_t (4 bytes) as list entry.
+NOTE: The 1s place of seconds is used to select the tone to be played 0-9.
+
+'R'	Read event list. Returns the event list. NN:Number of entries then 
+IsoTime ASCII entries seperated by CR (13).
+	NN (19 bytes) CR (19 bytes) CR ...
+
+'W'	Write list into EEPROM. Copies RAM table into EEPROM.
+Returns 'O' 'K' 0D if successful or 'F' 'A' 'I' 'L' 0D if not.
+
+'S'	Set time of day (20 bytes)(see 'L' command)
+	S YYYY-MM-DD HH:MM:SS
+Returns 'O' 'K' 0D if accepted or '?' 0D if not.
+
+'T'	Get time of day.
+Returns YYYY-MM-DD HH:MM:SS 0D or '?' 0D
+
+'C'	Enter Self Check mode
+	'C' 'H' 'E' 'C' 'K'
+
+Process
+service_events
+service_io_buttons
+service_comms
+	state IDLE
+		check for input char
+			yes - switch(command)
+			valid command - set parsing state
+	state PARSE	
+		check for input char
+			yes - NULL?
+				no - add to string. Max?
+
+
+Functions
+time_t mod_parse(char* str) - NULL terminated string or 22 char max. Return 
+0 is not parsed or error.
+
+Audio
+Notes and Tones. Need to reconfigure Timer1 as needed.
+Tones
+0 - Two 250ms 4kHz tones 500ms apart
+1 - One 250ms 4kHz tone
+2
+3
+4
+5 - Tune (6 notes)
+6
+7
+8
+9 - Tune (5 notes)
+
+Time Check
+On AWAKE - Scan list for Event < LocalTime. If TRUE, trigger Beeps and 
+then clear Event on List.
+
+// Return Event tag to select Beep or Tune
+uint8_t mod_eventList_check()
+
+Add isPlaying() check before going to sleep again to allow tune to complete.
+May need a killBeepTone() function.
+
+On Event
+	state = 1
+
+On Event, check if eTemp is true then go to processing, else check list.
+
+Add Event Processing
+	scan buttons = None, ACK, or Snooze
+
+	case 1: Event triggered
+		Set up 1 minute timeout.
+		Set up 2 second timeout.
+		Save EventTime and EventType. [me_lastEvent and eTone]
+		Trigger Beep/Tone
+		State = 2
+
+	case 2: Wait for any Button - 1 min
+		button = ACK?
+			yes:	State = ACK
+				exit
+		button = Snooze?
+			yes:	State = Snooze
+				Set up 10 min wait
+				exit
+		1 minute?
+			yes: set up 10 min wait. State = 3
+			no:	2 second?
+				yes: trigger Beep/Tone again
+
+	case 3: Wait - 10 min
+		button = ACK?
+			yes:	State = ACK
+				exit
+		button = Snooze?
+			yes:	State = Snooze
+				exit
+		10 minutes?
+			yes: ++wait10Min = 3?
+				no: set state = 2 4
+				yes:	Store Event Time, Snooze time, and <x> tag in EEPROM.
+					Resume Sleep cycle.
+	
+	case 4: Repeat Beeps/Tune for 1 min
+		Set up 1 minute timeout.
+		Set up 2 second timeout.
+		Trigger Beep/Tone
+		State = 2
+
+	case Snooze:
+		button = ACK?
+			yes:	State = ACK
+			no:	10 minutes?
+				yes: ++wait10Min = 3?
+					no: State = 4
+					yes:	Store Event Time, Snooze time, and <x> tag in EEPROM.
+						Resume Sleep cycle.
+
+	case ACK:
+		Store Event Time, Local Time and <x> tag in EEPROM.
+		Play ACK tune.
+		Resume Sleep cycle.
+
+EEPROM
+Need a mod_epLog.c, .h for logging data to EEPROM and retrieving data.
+[2]
+'D'	Dump EEPROM data
+Reads out Tags and Time in ASCII formatted text.
+<tag> YYYY-MM-DD HH:MM:SS [YYYY-MM-DD HH:MM:SS]
+<tag>
+	1	Normal ACK on event. Event time.
+	2	Snooze activated. Event time. Final ACK time.
+	3	No Action taken within 30 min. Event time.
+
+[2]
+'E'	Erase EEPROM
+	Zeros EEPROM data.
+
+Store <tag> first, then one or two time_t values. <tag> will determine the number of 
+time_t values.
+Maintain an me_NextAdrs value to manage storage location.
+
+void me_store(uint8_t tag, time_t event);
+void me_store(uint8_t tag, time_t event1, time_t event2);		// Overload function.
+void me_getLog(uint8_t init);	// send 0 to reset eeprom address.
