@@ -1,0 +1,134 @@
+LN_BootloaderMaster.txt
+22jan17 ndp
+15mar17
+
+ref1: Atmel AVR112: TWI Bootloader for devices without boot section
+ref2: I2C_Bootloader_Layout.pdf - Diagram of test connections. (see[1]Fig 1-1)
+ref3: AVR911_AVR OS Programmer.pdf - PC AVROSP app note.
+ref4: LN_BootloaderSlave.txt
+
+Plan 0: Straight port to AS 7.0 with minor clean up to build.
+Have to change Master Target from ATmega2650 to ATmega164P.
+
+Set up Atmel Studio 7.0 TWI_Master_7_0 project in
+	\Bootloader\PortOrgAVR112\TWI_Master_7_0
+..ok..set Device to ATmega164P..
+Add docs folder..ok..save this doc there..
+Copy files from AV112.zip archive TWI_Master:
+TWI_Master.c
+serial.c,.h
+Add to project and remove (not delete) main.c file..
+MOD: TWI_Master.c
+Replace
+	#include <inavr.h>
+with
+#include <avr/io.h>
+Comment out extra headers
+//#include "defines.h"
+//#include "flash.h"
+//#include "stdint.h"
+Change IO defines to match ATmega164P..see code.
+hmm, Slave defs don't make sence here..leave as is.
+Slave address is SDA_R+0x30 = 0xb0..ok.
+ADD: delay_cycles( uint16_t delay ) function to replace __delay_cycles()..
+MOD: main()..delete __C_task and replace void with int..
+REPLACE: serial.c with my 164P serial code..ok..build..hmm..
+Define _ATTINY85 for Slave target defines..
+#define _ATTINY85 1
+build..hmm..copy sig bytes for ATMEGA2560 from defines.h file. These should 
+not be needed for anything. May change to ATMEGA164P later.
+comment out _BV define..build..ok.
+Program Master board..ok..hook up FTDI/USB PC->Master board..
+Find COM port: COM5 for FTDI/USB
+CD to AVROSP.exe directory..change port to COM5, 38400, 8N1
+>mode com5 baud=38400 parity=n data=8
+ok..try
+>avrosp -s -cCOM5
+ok..returns : 0x1e 0x98 0x01 the signature bytes in the Master..com is up.
+I2C untested, but should work..Save..
+29jan17
+try with new I2C USI nonIntr Slave. Should get SDA_R handshake..
+>cd C:\Data\EmbeddedSystems\I2C_Slave_Boards\Bootloader\PortOrgAVR112\Support
+>mode com5 baud=115200 parity=n data=8
+>avrosp -dATtiny85 -pf -vf -ifDemoApp1_ATtiny85.hex -cCOM5
+ah..need to return 00..ok, got past that. Stopped on "Reading Flash contents..."
+hmm..let's try simpler messages..
+[3]>avrosp -L00 -cCOM5
+Needs device name.
+>avrosp -dATtiny85 -L00 -cCOM5
+ok, code does not support asking Slave to verify Lock bits. Returns '\r', but no failure.
+Add log() function to capture PC data sent in. Add a -Z to dump LOG.
+disable do() success..return 0 for Send/Rec..
+ok. 0x1B is nop for sync, S s b A 0 0 B 0 0x40 F 0x0E 0xC0 0x15 0x0C ... flash data
+So, need to support these..
+S	ask for ID bytes..ok
+s	ask for sig bytes..ok
+b	return 'Y' dd dd..ok
+A 0 0	Program address 0x0000	Load Address into pageBuffer[0:1]..ok
+B 0 0x40	Receive 64 bytes into pageBuffer and send to Slave w/ TWI_CMD_PAGEUPDATE+adrs.
+F dd dd ..	Flash data 64 bytes..buffer[3:67]..
+Always uses TWI_CMD_PAGEUPDATE command..DOH..success is 1 not 0..statusCode = 0 for good..
+not resetting over flow flag..fix..
+WTF..missing 'g' command to read back Flash..add..Gee, gets all the way though 
+now..sheesh..save
+30jan17
+NOTE: ATtiny85 on Demo board is programmed with usiTwiSlaveNI code.
+\EmbeddedSystems\USI_I2C_Slave_NonIntr\usiTwiSlaveNI
+
+12mar17
+Back into it while waiting for other project feedback..
+TO RUN: Open CLI
+>cd C:\Data\EmbeddedSystems\I2C_Slave_Boards\Bootloader\PortOrgAVR112\Support
+>mode com5 baud=115200 parity=n data=8
+>avrosp -dATtiny85 -pf -vf -ifDemoApp1_ATtiny85.hex -cCOM5
+
+ok, gets through. No I2C yet (I knew that)..and fails on compare, expected..ok..
+First things first. [4]Get Slave to ACK SLA_R and a one byte.
+Focus on get_slave_status() and MasterReceive() functions..they read 1 byte..
+MOD: TWI_Master.c::main.c - change for(;;) to while(true) and if else to switch() 
+for clarity..add <stdbool.h>..ok, builds..enable MasterReceive() and monitor I2C lines..
+What happened to log()?..no where..switch() replace works..enable MR() and check I2C..
+hmm..mod InitTWI() - enable pins..nope..force call..yep, Slave ACK'd address (0xb1)..
+Ok, sends 'S' then 's' then 'b' [Y 0x00 0x40] 64 byte block size then 'A' 00 00 [\r]
+then a 'B' 00 40 'F' 0E C0 data block [\r] then next word adrs 'A' 00 20 
+hmm, need the enable MasterTransmit()..ok, send a block. I2C seems ok..
+enable get_slave_status(), read_from_slave(), send_command(), ..ok..hangs up in First_Time()..
+Now need to adj process flow to get rid of reset and boot enable lines.
+14mar17
+From Slave..
+So, PC -> A 0000 B 0040 F [64]bytes and Master does one SLA_R, 
+then PC -> A 0020 B 0020 F [32]bytes (rest of the hex file) then b and waits.
+MasterTransmit() not gettign called? from 'B' command?..my 'g' command BUG maybe..
+seems to got to verify step now..hmm..second block is sent as 64 to Slave even 
+though only 32 from PC..ok, since have to prog page at a time..
+Back to Slave..
+TODO Master: Implement 'g' command.
+15mar17
+'A' command sets address (words) and 'g' command asks for N bytes (0x40 or 0x20)
+Should have an I2C command that sends address, not have it buried in page block.
+ADD: commands.h file
+Get rid of FirstTime() use..change to pageBuffer[i+2]..ok..
+Master updated to support Slave commands..ok..program 164..sends for SIG and no SLA_R..
+add delay..ok..read NAK'd now..go to Slave..
+hmm..MasterTransmit() can't handle 1 byte message...longer delay..ok, ACKs read..back to 1 
+byte..okk with 1..Slave sending 3 back, 00 66 66..complete command in Slave..ok..
+hmm..Stop issue in MasterReceive, not MT..ok..clearSlave RxFifo on single command..ok..
+SIG works now..
+16mar17
+'B' 64 bytes sent forllowed by continuous Reads..comment out success check for now..
+may reinsert to check programming success..run..ok..all the way to 'g' and I2C GET_DATA..
+no I2C data Read..hmm..add delay after MT..gets through all steps, but read data is 
+all 00..oops, Host sends address HL, I2C sent LH..don't shift, let Slave adjust..
+back to Slave for read data issue..suspect Slave not looking at length, only asking 
+for 0x20 of second transfer, not PAGE_SIZE (0x40)..ok..
+Second 'A' recv while sending page to Slave. Problem? ..no, but last byte of page 
+from Master has no STOP..after sending second page (0x20), Master gets a 'b', 
+then sends 32 more bytes..??..MT sending PAGE_SIZE+2, not size+2..fix..almost there 
+..need to replace App Reset bytes on get data..back to Slave..fixed..
+Programs and verifies..TA DA!!..commit rev 211
+
+
+
+
+
+

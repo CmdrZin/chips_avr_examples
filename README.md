@@ -24,3 +24,4 @@ These are projects that use the chip_avr_asm_lib and 'C' modules.
 |LCD_ControlPanelSlaveInC | Revised LCD I2C Slave in C code.|
 |AnimatronicFaceBoard | Animated Face development board in C code.|
 |WinkyReduxProject | Redo of Winky Lights with AVR ATtiny85 in C code.|
+|AT85_I2C_Bootloader | I2C Bootloader for ATtiny85 based on AVR911 and AVR112.|

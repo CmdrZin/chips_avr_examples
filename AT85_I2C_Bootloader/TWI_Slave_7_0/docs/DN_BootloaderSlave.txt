@@ -1,0 +1,53 @@
+DN_BootloaderSlave.txt
+13mar17 ndp
+15mar17
+
+ref1: Atmel AVR112: TWI Bootloader for devices without boot section
+ref2: I2C_Bootloader_Layout.pdf - Diagram of test connections. (see[1]Fig 1-1)
+ref3: AVR911_AVR OS Programmer.pdf - PC AVROSP app note.
+ref4: ATtiny25-45-85_Datasheet.pdf
+ref5: LN_BootloaderMaster.txt
+ref6: \EmbeddedSystems\USI_I2C_Slave_NonIntr\usiTwiSlaveNI - Non-Interrupt USI I2C
+
+
+Plan 0: Straight port to AS 7.0 with minor clean up to build. (Not Happening)
+Slave Target is ATtiny85, which code supports (Sort of).
+
+Slave I2C Address: 0x58 (0xb0)
+
+TODO	Add returnSig() to get back signature bytes.
+TODO	Use usiTwiSlaveNI[6] code to replace crap used.
+
+Change structure to NOT use Reset and BootEnable lines to control process.
+Still use WatchDog Timer for lock ups. Set for Max time .
+
+Use Register protocol:
+00	Status register - Default after any command.
+
+Add Commands:
+CMD_GET_STATUS(00)	- Put Status in TxFifo
+CMD_RECV_ADRS(01)	- Set workingAdrs = AH<<8 + AL
+CMD_RECV_DATA(02)	- Place NN bytes into RAM/SPM to program Flash at workingAdrs.
+CMD_GET_DATA(03)	- Read from workingAdrs into TxFifo.
+CMD_GET_SIG(04)		- Put three signature bytes into TxFifo.
+
+
+New Process
+1. On reset - Program RESET vector to jump to Bootloader.
+To run app code, bootloader always jumps to first line after the vector table.
+
+2. If no I2C comm within 10 seconds after reset,
+	if LAST_INTVECT_ADDRESS+2 [0x001E] = 0xFF then stay in bootloader
+	else jump to LAST_INTVECT_ADDRESS+2 to run app code.
+
+3. If successful boot load, jump to LAST_INTVECT_ADDRESS+2 to run app code.
+
+15mar17
+CHANGE: Add Slave commands
+COMMAND - SLA_W
+00			- Send back status byte. Alway have one byte (00) in TxFifo for now.
+01 AH AL		- Send address as WORD address. Convert to BYTE address in Slave.
+			- ADDRESS = AH<<8 + AL
+02 NN			- Receive NN bytes and program them into ADDRESS as a block.
+03 NN			- Send back NN bytes from FLASH starting at ADDRESS.
+04			- Return three byte SIGNATURE for device.

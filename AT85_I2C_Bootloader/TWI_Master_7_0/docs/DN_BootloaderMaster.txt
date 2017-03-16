@@ -1,0 +1,52 @@
+DN_BootloaderMaster.txt
+29jan17 ndp
+30jan17
+
+ref1: Atmel AVR112: TWI Bootloader for devices without boot section
+ref2: I2C_Bootloader_Layout.pdf - Diagram of test connections. (see[1]Fig 1-1)
+ref3: AVR911_AVR OS Programmer.pdf - PC AVROSP app note.
+
+TO RUN: Open CLI
+>cd C:\Data\EmbeddedSystems\I2C_Slave_Boards\Bootloader\PortOrgAVR112\Support
+>mode com5 baud=115200 parity=n data=8
+>avrosp -dATtiny85 -pf -vf -ifDemoApp1_ATtiny85.hex -cCOM5
+also supported
+>avrosp -dATtiny85 -s -cCOM5
+
+
+Plan 0: Straight port to AS 7.0 with minor clean up to build.
+Have to change Master Target from ATmega2650 to ATmega164P.
+
+Add a LOGGING process to capture character sent from PC. Add a -Z to dump back LOG.
+
+Bootloader flow
+S	ask for sig bytes
+s	?
+b	?
+A 0 0	Program address 0x0000
+B 0 0x40	? 0x0040
+F dd dd ..	Flash data
+...
+A 0 0	Program address 0x0000
+g 0 0x40	Read back Flash
+...
+
+NOTE: 'g' is not supported in the original code. Added, but for it to work 
+the Slave needs to save the 0x0000 bytes and reinsert them into the Flash 
+read back image for Page 0 since the Bootloader had modified the location.
+
+CHANGE: Add Slave commands
+COMMAND - SLA_W
+00			- Send back status byte. Alway have one byte (00) in TxFifo for now.
+01 AH AL		- Send address as WORD address. Convert to BYTE address in Slave.
+			- ADDRESS = AH<<8 + AL
+02 NN			- Receive NN bytes and program them into ADDRESS as a block.
+03 NN			- Send back NN bytes from FLASH starting at ADDRESS.
+04			- Return three byte SIGNATURE for device.
+
+Add commands.h file (enum) for both projects:
+CMD_GET_STATUS(00)	- Put Status in TxFifo
+CMD_RECV_ADRS(01)	- Set workingAdrs = AH<<8 + AL
+CMD_RECV_DATA(02)	- Place NN bytes into RAM/SPM to program Flash at workingAdrs.
+CMD_GET_DATA(03)	- Read from workingAdrs into TxFifo.
+CMD_GET_SIG(04)		- Put three signature bytes into TxFifo.
