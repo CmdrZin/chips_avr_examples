@@ -43,7 +43,6 @@
 #define	SIGNATURE_BYTE_2	0x93
 #define	SIGNATURE_BYTE_3	0x0B
 
-
 typedef enum cmdModes { CM_IDLE, CM_ADRS_HI, CM_ADRS_LO, CM_RECV_DATA, CM_RECV_SIZE, CM_SEND_DATA } CM_MODE;
 
 void commandProcess(uint8_t cmd);
@@ -62,7 +61,6 @@ uint8_t	pageBuffer[PAGE_SIZE];
 uint8_t	dataIndex;
 uint8_t	appResetBytes[2];
 
-
 int main(void)
 {
 	mod_led_init();
@@ -72,11 +70,9 @@ int main(void)
 
 	resetBootReset();				// overwrite App code reset vector
 
-//	mod_led_toggle(2);
-
 	uts_init(SLAVE_ADDRESS>>1);		// adj for standard use. (0xb0 -> 0x58)
 
-	initBootTimer(5);
+	initBootTimer(10);				// N * sec
 
 	putTxFifo(0x00);				// preload TxFifo to test for a Read.
 
@@ -94,7 +90,6 @@ int main(void)
 		uts_poll();					// Service non-interrupt I2C handler.
 
 		if(!isRxEmpty()) {
- mod_led_toggle(6);
 			commandProcess(getRxFifo());
 		}
     }
@@ -107,28 +102,23 @@ void commandProcess(uint8_t cmd)
 		case CM_IDLE:									// Waiting for NEW command sequence
 			switch(cmd) {
 				case CMD_GET_STATUS:					// Request status
- mod_led_toggle(1);
 					putTxFifo(systemStatus);
 					break;
 
 				case CMD_RECV_ADRS:
- mod_led_toggle(2);
 					commandMode = CM_ADRS_HI;
 					break;
 
 				case CMD_RECV_DATA:
- mod_led_toggle(3);
 					commandMode = CM_RECV_SIZE;			// Expecting one page block of data (0x40)
 					break;
 
 				case CMD_GET_DATA:
- mod_led_toggle(4);
 					commandMode = CM_SEND_DATA;
 					clearTxFifo();
 					break;
 
 				case CMD_GET_SIG:
- mod_led_toggle(5);
 					commandMode = CM_IDLE;
 					clearTxFifo();
 					putTxFifo(SIGNATURE_BYTE_1);
@@ -138,33 +128,28 @@ void commandProcess(uint8_t cmd)
 					break;
 
 				default:
- mod_led_toggle(8);
 					break;
 			}
 			break;
 
 		case CM_ADRS_HI:
- mod_led_toggle(10);
 			workingAdrs = cmd;
 			commandMode = CM_ADRS_LO;
 			break;
 
 		case CM_ADRS_LO:
- mod_led_toggle(11);
 			workingAdrs = (workingAdrs<<8) + cmd;
 			workingAdrs <<= 1;							// Convert to bytes address.
 			commandMode = CM_IDLE;
 			break;
 
 		case CM_RECV_SIZE:
- mod_led_toggle(12);
 			dataCount = cmd;
 			dataIndex = 0;
 			commandMode = CM_RECV_DATA;
 			break;
 
 		case CM_RECV_DATA:								// Address already received and in workingAdrs.
- mod_led_toggle(13);
 			pageBuffer[dataIndex] = cmd;
 			if(++dataIndex == dataCount) {
 				// Write dataBuffer to Flash
@@ -174,10 +159,8 @@ void commandProcess(uint8_t cmd)
 			break;
 
 		case CM_SEND_DATA:
- mod_led_toggle(14);
 			dataCount = cmd;
 			commandMode = CM_IDLE;
- mod_led_on();
 			if(workingAdrs == 0) {
 				// Restore App Reset bytes if needed. Page 0.
 				putTxFifo(appResetBytes[0]);
@@ -192,11 +175,9 @@ void commandProcess(uint8_t cmd)
 					putTxFifo(pgm_read_byte(workingAdrs++));
 				}
 			}
- mod_led_off();
 			break;			
 
 		default:
- mod_led_toggle(20);
 			commandMode = CM_IDLE;
 			break;
 	}
@@ -274,7 +255,10 @@ void Erase_One_Page (uint16_t addr)
 }
 /***********************************************************************/
 
-/***********************************************************************/
+/*
+ * modified: 3/16/2017 ndp	- Save Apps Reset Vector to use on Read Back.
+ *
+ ******************************************************************** */
 void UpdatePage (uint16_t pageAddress)
 {
 	// Mask out in-page address bits.

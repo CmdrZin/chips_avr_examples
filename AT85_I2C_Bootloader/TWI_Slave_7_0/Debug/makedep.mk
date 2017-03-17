@@ -8,9 +8,5 @@ spmUtils.s
 
 mod_led.c
 
-TWI_Slave.c
-
 usiTwiSlaveNI.c
-
-USI_TWI_Slave.c
 

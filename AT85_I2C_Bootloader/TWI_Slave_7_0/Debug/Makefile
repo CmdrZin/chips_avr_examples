@@ -39,9 +39,7 @@ SUBDIRS :=
 C_SRCS +=  \
 ../main.c \
 ../mod_led.c \
-../TWI_Slave.c \
-../usiTwiSlaveNI.c \
-../USI_TWI_Slave.c
+../usiTwiSlaveNI.c
 
 
 PREPROCESSING_SRCS +=  \
@@ -55,33 +53,25 @@ OBJS +=  \
 main.o \
 spmUtils.o \
 mod_led.o \
-TWI_Slave.o \
-usiTwiSlaveNI.o \
-USI_TWI_Slave.o
+usiTwiSlaveNI.o
 
 OBJS_AS_ARGS +=  \
 main.o \
 spmUtils.o \
 mod_led.o \
-TWI_Slave.o \
-usiTwiSlaveNI.o \
-USI_TWI_Slave.o
+usiTwiSlaveNI.o
 
 C_DEPS +=  \
 main.d \
 spmUtils.d \
 mod_led.d \
-TWI_Slave.d \
-usiTwiSlaveNI.d \
-USI_TWI_Slave.d
+usiTwiSlaveNI.d
 
 C_DEPS_AS_ARGS +=  \
 main.d \
 spmUtils.d \
 mod_led.d \
-TWI_Slave.d \
-usiTwiSlaveNI.d \
-USI_TWI_Slave.d
+usiTwiSlaveNI.d
 
 OUTPUT_FILE_PATH +=TWI_Slave_7_0.elf
 
@@ -97,10 +87,6 @@ LINKER_SCRIPT_DEP+=
 
 
 # AVR32/GNU C Compiler
-
-
-
-
 
 
 

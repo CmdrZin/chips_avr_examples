@@ -1,6 +1,6 @@
 LN_BootloaderSlave.txt
 22jan17 ndp
-16mar17
+17mar17
 
 ref1: Atmel AVR112: TWI Bootloader for devices without boot section
 ref2: I2C_Bootloader_Layout.pdf - Diagram of test connections. (see[1]Fig 1-1)
@@ -240,9 +240,16 @@ Address is now WORD address..check Read data..fix logic..ok..still 00..DOH..
 misread RxFifo..fix..try..hmm..W 03 40 R then..cmd but not rest of it..ah, missing break; 
 ..fix..ok..getting programmed page 0 AND retains BootReset..
 back to Master..ok..need to restore App reset bytes..convert to byte address..
-WOOT..verified to 0x40..fix..TA DA!!!!..programmed and verified..commit rev 211
+WOOT..verified to 0x40..fix..TA DA!!!!..programmed and verified..commit rev 212
 TODO: Jump to App after programming.
-
+17mar17
+EXTRAS TODO: Put I2C address in EEPROM and highjack an AVROSP command to set it.
+Code cleanup..
+main.c - remove led toggles..
+TWI_Slave.c - remove
+USI_TWI_Slave.c,.h - remove
+build..1358 bytes..reprogram and test..ok..passes..commit after Master code cleanup..
+rev 214
 
 
 

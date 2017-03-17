@@ -172,19 +172,10 @@
     <Compile Include="mod_led.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="TWI_Slave.c">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="usiTwiSlaveNI.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="usiTwiSlaveNI.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="USI_TWI_Slave.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="USI_TWI_Slave.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>

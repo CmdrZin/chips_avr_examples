@@ -211,6 +211,7 @@ uint8_t MasterReceive( uint8_t address, uint8_t * data, uint16_t length )
 
 
 // TODO
+#if 0
 void get_slave_status(void)
 {
 	statusCode = 0;
@@ -224,7 +225,7 @@ void get_slave_status(void)
 		success = MasterReceive( SLAVE_ADDRESS, &statusCode, 1 );
 	} while ((statusCode != 0) || (!success));
 }
-
+#endif
 
 // Returns success.
 uint8_t MasterTransmit( uint8_t address, uint8_t * data, uint16_t length )
@@ -291,6 +292,7 @@ void First_Time(void)
 #endif
 
 // TODO
+#if 0
 void read_from_slave(void)
 {
 	statusCode = 0;
@@ -305,24 +307,29 @@ void read_from_slave(void)
 		} while ( !success );
 	}
 }
-
+#endif
 
 // TODO
+/*
+ * Simple Slave query to read back one or a few bytes.
+ * Used for Lock bytes or Fuses.
+ * void read_and_send(uint8_t cmd, uint8_t nbytes)
+ */
 void read_and_send(uint8_t whichversion)
 {
-	statusCode = 0;
-	success = 1;
-
-	runApp[0]=whichversion;
-	runApp[1]=whichversion;
-	get_slave_status();
-	success = MasterTransmit( SLAVE_ADDRESS, runApp, 2 );
-	read_from_slave();
-	sendchar( statusCode );
+	//statusCode = 0;
+	//success = 1;
+//
+	//runApp[0]=whichversion;
+	//runApp[1]=whichversion;
+	//success = MasterTransmit( SLAVE_ADDRESS, runApp, 2 );
+	//success = MasterReceive( SLAVE_ADDRESS, &statusCode, 1 );
+	//sendchar( statusCode );
 }
 
 
 // TODO
+#if 0
 void send_command(uint8_t command)
 {
 	statusCode = 0;
@@ -335,10 +342,9 @@ void send_command(uint8_t command)
 	get_slave_status();
 	success = MasterTransmit( SLAVE_ADDRESS, runApp, 2 );
 }
-
+#endif
 
 /*************************************************************************/
-//__C_task void main(void)
 int main(void){
 	unsigned int temp_int;
 	unsigned char val = 0;
@@ -351,13 +357,9 @@ int main(void){
 	
 	mod_led_init();
 
-mod_led_on();
-
 	InitTWI();
 	
 	initbootuart(); // Initialize UART.
-
-mod_led_off();
 
 	/* Main loop */
 	while(true)
@@ -375,10 +377,12 @@ mod_led_off();
 			case 'r':
 				switch(command_char) {
 					case 'a':
+						// NOT SUPPORTED in new code.
 						read_and_send( TWI_CMD_AVERSION );
 						break;
 
 					case 'b':
+						// NOT SUPPORTED in new code.
 						read_and_send( TWI_CMD_BVERSION );
 						break;
 
@@ -394,6 +398,7 @@ mod_led_off();
 
 					case 'f':
 						// Status condition
+						// NOT SUPPORTED in new code.
 						read_and_send(TWI_CMD_GETERRCONDN);
 						break;
 
@@ -404,8 +409,10 @@ mod_led_off();
 				break;
 
 			case 'l':
-				// Write lock byte -> load command
+				// Write lock byte -> load command. NOT SUPPORTED in new code.
+				// NOTE: This looks like a hijacked command to do a CRC check.
 				command_char = recchar();
+#if 0
 				if( command_char == 'c' )
 				{
 					send_command( TWI_CMD_CRCCHECK );
@@ -414,6 +421,7 @@ mod_led_off();
 					read_from_slave();
 					CRC_LO = statusCode;
 				}
+#endif
 				sendchar('\r');
 				break;
 
@@ -432,7 +440,6 @@ mod_led_off();
 				break;
 
 			case 'A':
- mod_led_toggle(2);
 				addr =(recchar()<<8) | recchar(); // Read address high and low byte.
 				if(addr > MAX__APP_ADDR) over_size_flag = 1;
 				//+ 15mar17 ndp - send address to Slave.
@@ -442,15 +449,16 @@ mod_led_off();
 				(void) MasterTransmit( SLAVE_ADDRESS, slaveCmdBuff, 3 );
 				//-
 				sendchar('\r'); // Send OK back.
- mod_led_toggle(2);
 				break;
 
 			case 'e':
-				// Chip erase.
+				// Chip erase.	NOT SUPPORTED in new code.
+#if 0
 				runApp[0] =  TWI_CMD_ERASEFLASH;
 				runApp[1] =  TWI_CMD_ERASEFLASH;
 				get_slave_status();
 				success = MasterTransmit( SLAVE_ADDRESS, runApp, 2 );
+#endif
 				sendchar('\r'); // Send OK back.
 				break;
 		
@@ -467,18 +475,12 @@ mod_led_off();
 				temp_int = (recchar()<<8) | recchar();	// Get block size.
 				val = recchar();						// Get memtype.
 				sendchar( BlockLoad(temp_int, val) );	// Block load.
-//				if(reps == 0) First_Time();
- mod_led_toggle(4);			// Need a short delay here.
+// mod_led_toggle(4);			// Need a short delay here.
 			 	pageBuffer[0] = CMD_RECV_DATA;					// Address was sent in 'A' command service.
 				pageBuffer[1] = (uint8_t)(temp_int & 0x00FF);	// NL..Only block size less than 256 supported.
 				// NOTE: Always sends PAGE_SIZE even if less data received from Host.
 				success = MasterTransmit( SLAVE_ADDRESS, pageBuffer, pageBuffer[1]+2 );
 
-//				if (success)
-//				{
-//					get_slave_status();
-//				}
-//				reps ++;
 				break;
 		
 			case 'S':
@@ -495,7 +497,8 @@ mod_led_off();
 		
 			case 'V':
 				// Return software version.
-				send_command(TWI_CMD_EXECUTEAPP);
+				// NOTE: TODO Should implement in new code.
+//				send_command(TWI_CMD_EXECUTEAPP);
 				// Disable bootloader mode for slave
 				sendchar('2');
 				sendchar('0');
@@ -503,11 +506,6 @@ mod_led_off();
 
 			case 's':
 				// Return signature bytes [for the Target device ATtiny85].
-#if 0
-				sendchar( SIGNATURE_BYTE_3 );
-				sendchar( SIGNATURE_BYTE_2 );
-				sendchar( SIGNATURE_BYTE_1 );
-#else
 				slaveCmdBuff[0] = CMD_GET_SIG;
 				(void) MasterTransmit( SLAVE_ADDRESS, slaveCmdBuff, 1 );
  mod_led_toggle(200);			// Need a short delay here to let Slave set up data.
@@ -515,7 +513,6 @@ mod_led_off();
 				sendchar( slaveCmdBuff[2] );
 				sendchar( slaveCmdBuff[1] );
 				sendchar( slaveCmdBuff[0] );
-#endif
 				break;
 		
 			/* Add missing command .. ndp 01-29-2017
@@ -524,15 +521,8 @@ mod_led_off();
 			 * TODO: Need to read from Slave.
 			 */
 			case 'g':
- mod_led_toggle(4);
  				temp_int = (recchar()<<8) | recchar();	// Get block size.
 				val = recchar();						// Get mem type.
- #if 0
-				for(int i=0; i<temp_int; ++i)
-				{
-					sendchar( 0 );
-				}
-#else
 				// NOTE: Address was sent in 'A' command process.
 				slaveCmdBuff[0] = CMD_GET_DATA;
 				slaveCmdBuff[1] = (uint8_t)(temp_int & 0x00FF);
@@ -544,8 +534,6 @@ mod_led_off();
 				{
 					sendchar( pageBuffer[i] );
 				}
-#endif
- mod_led_toggle(4);
 				break;
 
 			default:

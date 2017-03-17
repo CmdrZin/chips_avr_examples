@@ -1,6 +1,6 @@
 LN_BootloaderMaster.txt
 22jan17 ndp
-15mar17
+17mar17
 
 ref1: Atmel AVR112: TWI Bootloader for devices without boot section
 ref2: I2C_Bootloader_Layout.pdf - Diagram of test connections. (see[1]Fig 1-1)
@@ -126,9 +126,16 @@ from Master has no STOP..after sending second page (0x20), Master gets a 'b',
 then sends 32 more bytes..??..MT sending PAGE_SIZE+2, not size+2..fix..almost there 
 ..need to replace App Reset bytes on get data..back to Slave..fixed..
 Programs and verifies..TA DA!!..commit rev 211
-
-
-
+17mar17
+Code cleanup..
+Update test layout..
+'e' not supported..
+First_Time() - remove
+read_from_slave() - remove
+read_and_send() - TODO: Save this functions and implement with new code.
+case 'V' -  TODO: Save this command and implement with new code.
+TODO: Should look into implementing other AVROSP commands.
+build..1512 bytes..ok, still works..commit 214
 
 
 
