@@ -1,0 +1,43 @@
+DN_DemoApp2_I2C_ATtiny85.txt
+14apr17 ndp
+
+
+Design Notes for I2C USI ATtiny85 Demo App for I2C Bootloader Project
+
+
+Target: ATtiny85, 8MHz
+I2C Slave Adrs: 0x40
+
+This is a simple I2C app that allows control of an LED on PB1(pin6) of an 
+ATtiny85 using my interrupt driven USI I2C Slave interface.
+A side effort will be to review the usiI2C code and add clock-strectching 
+in the Read process.
+This will use the standard Register Architecture used by most industry devices.
+
+Write Process:
+	SLA_W <Wreg> [data] ...
+The number of data bytes is determined by the Wreg used.
+
+Read Process:
+	SLA_W <Rreg> SLA_R [data] ...
+The number of data bytes returned is determined by the Rreg used.
+
+Protocol
+Write Commands from the Master
+Control Registers:
+  Control		0x01			b7-b1: unused, b0: Counter Reset if 1.
+  LED			0x05
+Commands:
+  SDA_W 01 01	- Reset counter
+  SDA_W 05 00	- turn the LED OFF
+  SDA_W 05 01	- turn the LED ON
+where SDA_W is the I2C address in Write Mode. [ i.e. (SLAVE_ADRS<<1)|0 ]
+
+Read Commands from the Master
+Control Registers:
+  Counter		0x04
+Commands:
+  SDA_W 04 SDA_R <count>	- return count
+where SDA_W is the I2C address in Write Mode. [ i.e. (SLAVE_ADRS<<1)|0 ]
+where SDA_R is the I2C address in Read Mode. [ i.e. (SLAVE_ADRS<<1)|1 ]
+

@@ -1,0 +1,41 @@
+LN_DemoApp2_I2C_ATtiny85.txt
+14apr17 ndp
+
+
+Log Notes for I2C USI ATtiny85 Demo App for I2C Bootloader Project
+
+ref1: DN_DemoApp2_I2C_ATtiny85.txt
+
+
+1. Make a directory 'DemoApp2_I2C_ATtiny85' under PortOrgAVR112/Support and 
+create an Atmel Studio 7.0 project there.
+File > Project > GCC C Executable Project > Name: Demo_I2C_AT85 > Ok
+Device Family: ATtiny .. Select ATtiny85 > OK .. build and clean, then save 
+and exit from Atmel Studio.
+Add a docs directory under DemoApp2_I2C_ATtiny85 and save this file there. 
+Create a DN_ file there also.
+2. Copy Slave_A2B1.c code into main.c and copy usiTwiSlave.c,.h files and 
+add them to the project. Update main.c comments to reflect this project.
+3. Set up a multi-switch block and state variable to process commands.
+Wire up to Ardiono MEGA for power (+5), gnd, SDA, and SCL. Hook up AVR ISP.
+program ATtiny85..uncheck CKDIV8 fuse..program..ok.
+4. Get \I2C_Easy\Slave_A2B1\Arduino_A2B1_demo for Arduino test code.
+Tools > Board > MEGA 2560. COM8 or as needed. Update code for this demo.
+Commands:
+	LED ON: 		05 01
+	LED OFF:		05 00
+	Reset Counter:	01 01
+	Read Counter:	04 ->	read one byte.
+Arduino code working..commands not..check I2C lines..hmm..all ACKs..check code.
+oops, missing a break;, causing a fall through..fix..hah, works..need to 
+change LED resistor to 1k from 2.2k for better brightness.
+
+
+
+
+ 
+ 
+
+
+
+
