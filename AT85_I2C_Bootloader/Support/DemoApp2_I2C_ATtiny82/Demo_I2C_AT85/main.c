@@ -54,15 +54,15 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <stdbool.h>
 
 #include "usiTwiSlave.h"
+#include "mod_led.h"
+#include "sysTimer.h"
 
 #define SLAVE_ADRS	0x40
 
-// LED hardware support
-#define LED_DDR		DDRB			// Port direction bit. 0:Input 1:output
-#define LED_PORT	PORTB			// Port being used.
-#define LED_P		PB1				// Port bit being used.
+#define BLINK_DELAY		250
 
 typedef enum {PS_IDLE, PS_CMD01_0, PS_CMD05_0 } PS_STATE;
 
@@ -76,22 +76,47 @@ int main(void)
 {
 	uint8_t data;
 
+	uint8_t blinkDelay = BLINK_DELAY;
+	bool	blinkToggle = false;
+
 	pState	= PS_IDLE;
 	mCounter = 0;
 
-	LED_DDR |= (1<<LED_P);			// Set LED pin as an output.
-	
+	mod_led_init();
+	st_init_tmr0();
 	usiTwiSlaveInit( SLAVE_ADRS );	// Initialize USI hardware for I2C Slave operation.
+
+mod_led_toggle(4);
 	
 	sei();							// Enable interrupts.
 	
 	usitwiSlaveEnable();			// Enable the USI interface to receive data.
+
+mod_led_toggle(3);
 
 	// A simple loop to check for I2C Commands.
 	// A state variable is needed to process multi-byte messages.
 	// 01, 05 are Writes. 04 is a Read.
     while(1)
     {
+#if 0
+		// Heart Beat LED
+		if( GPIOR0 & (1<<DEV_1MS_TIC) )
+		{
+			GPIOR0 &= ~(1<<DEV_1MS_TIC);
+			if(--blinkDelay == 0) {
+				blinkDelay = BLINK_DELAY;
+				if(blinkToggle) {
+					mod_led_on();
+				} else {
+					mod_led_off();
+				}
+				blinkToggle = !blinkToggle;
+			}
+		}
+#endif
+//mod_led_toggle(2);
+
 		if( usiTwiDataInReceiveBuffer() )
 		{
 			data = usiTwiReceiveByte();
@@ -138,11 +163,11 @@ int main(void)
 					// NOTE: LED hardware is wired 'Active LOW'.
 					if( data == 0)
 					{
-						LED_PORT |= (1<<LED_P);			// Turn LED OFF.
+						mod_led_off();				// Turn LED OFF.
 					}
 					else
 					{
-						LED_PORT &= ~(1<<LED_P);		// Turn LED ON.
+						mod_led_on();				// Turn LED ON.
 					}
 					pState	= PS_IDLE;				// reset for next message
 					break;

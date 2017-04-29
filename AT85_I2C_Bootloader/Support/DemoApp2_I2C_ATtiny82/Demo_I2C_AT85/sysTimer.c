@@ -21,60 +21,77 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * mod_led.c
+ * sysTimer.c
  *
- * Created: 5/18/2015		v0.01	ndp
- *  Author: Chip
- * revision:	9/12/2016	v0.02	ndp	mod for FaceBoard
+ * System Timer Utility
+ *
+ * Created: 12/03/2016		0.01	ndp
+ * Author: Chip
  */ 
 
 #include <avr/io.h>
+#include <avr/interrupt.h>
 
-#include "mod_led.h"
+#include "sysTimer.h"
 
-void mod_led_init()
+#define SLOW_TIC		10			// 100us * N for the slow tic @ 1ms
+
+uint8_t	st_cnt_1ms;					// secondary timer counter.
+
+/*
+ * Set up Timer0 to generate System Time Tic for 100us (10kHz) using 8MHz CPU clock
+ * Call this once after RESET.
+ *
+ * Modifies: OCR0A, TCCR0A, TIMSK0, TCCR0B, and GPIOR0
+ *
+ * input reg:	none
+ * output reg:	none
+ * resources:	R16
+ *
+ * NOTE: 1ms
+ */
+void st_init_tmr0()
 {
-	DEV_LED_DDR |= (1<<DEV_LED_OUT_PIN);			// set HIGH for output
+	OCR0A = 99;					// 8,000,000 / 800 = 10,000 : 8 * (1 + OCR0A) : 1 * (1+99)
+
+	TCCR0A = (1<<WGM01);
+
+	TIMSK = (1<<OCIE0A);		// enable counter 0 OCO interrupt
+
+	TCCR0B =  0b010;			// CPU div 8
+
+	st_cnt_1ms = SLOW_TIC;
+
+	GPIOR0 = 0;					// clear all tic flags
 
 	return;
 }
 
 /*
- * Turn LED OFF
+ * Timer0 CTC (compare) interrupt service.
+ * Called each 100us
+ *
+ * input reg:	none
+ * output reg:	none
+ * resources:	GPIOR0.GPIR00:7
+ * 				SRAM	1 byte
+ *				Stack:3
+ *
  */
-void mod_led_off()
+ISR(TIMER0_COMPA_vect)
 {
-	// Reverse logic for demo board use.
-	DEV_LED_PORT |= (1<<DEV_LED_OUT_PIN);			// set HIGH
+	// tic100us flags
+	GPIOR0 |= (1 << 0);
+	GPIOR0 |= (1 << 1);
+	GPIOR0 |= (1 << 2);
+	GPIOR0 |= (1 << 3);
 
-	return;
-}
-
-/*
- * Turn LED ON
- */
-void mod_led_on()
-{
-	// Reverse logic for demo board use.
-	DEV_LED_PORT &= ~(1<<DEV_LED_OUT_PIN);			// set LOW
-
-	return;
-}
-
-/*
- * Toggle LED ON n times.
- */
-void mod_led_toggle(uint8_t val)
-{
-	for(uint8_t i=0; i<val; ++i)
+	if( --st_cnt_1ms == 0 )
 	{
-		mod_led_on();
-		asm("nop");
-		asm("nop");
-		asm("nop");
-		mod_led_off();
-		asm("nop");
-		asm("nop");
-		asm("nop");
+		GPIOR0 |= (1 << 4);
+		GPIOR0 |= (1 << 5);
+		GPIOR0 |= (1 << 6);
+		GPIOR0 |= (1 << 7);
+		st_cnt_1ms = SLOW_TIC;
 	}
 }

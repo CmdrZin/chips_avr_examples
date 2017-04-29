@@ -250,10 +250,40 @@ TWI_Slave.c - remove
 USI_TWI_Slave.c,.h - remove
 build..1358 bytes..reprogram and test..ok..passes..commit after Master code cleanup..
 rev 214
-
-
-
-
+14apr17
+MOD: main.c - added 'jump to app' if no comms within 10 sec after reset and 
+there is an app loaded.
+test it..open terminal CLI..
+>cd C:\Data\EmbeddedSystems\I2C_Slave_Boards\Bootloader\PortOrgAVR112\Support
+>mode com5 baud=115200 parity=n data=8
+>avrosp -dATtiny85 -pf -vf -ifDemoApp2_I2C_AT85.hex -cCOM5
+hmm..reset vector bytes not matching..Set SELFPRGEN fuse..no errors..check 
+image..YES..try Arduino as master, wait 10 seconds, then run..hmm..seems to 
+stay in bootloader...put in some flashing LED code..3:call app, 5:in boot..
+hmm..check start location of app..blew out mkII..not polling in wait??..DOH..
+fix..can't program though..no ISP..
+29apr17
+Get latest..build Slave..program. Use Bootloader to load App2.
+>cd C:\Data\EmbeddedSystems\I2C_Slave_Boards\Bootloader\PortOrgAVR112\Support
+>mode com3 baud=115200 parity=n data=8
+>avrosp -dATtiny85 -pf -vf -ifDemoApp2_I2C_AT85.hex -cCOM3
+Need to run CLI as Admin if on Windows 10..ok..works. 20 sec LED, then off.
+Try with Arduino. Slave=0x40. hmm. Try direct programming of Slave with App2.
+hmm..set up Saleae pod..fix app2..tested..still not leaving bootloader..
+put blinks in to debug..if any I2C comm (0x58) exit Boot, try this before 
+reprogramming..Chg Arduino to use 0x58 one write only..nope..change logic to 
+1. Run App if no I2C comm in 20sec AND there is an App.
+2. If Bootloader is address during the 20sec window, Bootloader is entered OR if 
+no App code.
+reprogram..blink(5) after 20sec..ok..try to load App2a..
+cd C:\Data\EmbeddedSystems\I2C_Slave_Boards\Bootloader\PortOrgAVR112\Support
+mode com3 baud=115200 parity=n data=8
+avrosp -dATtiny85 -pf -vf -ifDemoApp2a_I2C_AT85.hex -cCOM3
+ok, got 3 blinks..try Arduino..hmm, not the right jump point?..going to 001E, 
+check App2a code..looks like 000F is the place..try that..nothin now..check 
+images in Flash..hmm, Bootjump is 0000, no written..add a resetBootReset just 
+before App jump..reprog..d/l App2a..try Arduino test..WOOT, Up and running.
+Commit..
 
 
 

@@ -21,60 +21,28 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * mod_led.c
+ * sysTimer.h
  *
- * Created: 5/18/2015		v0.01	ndp
+ * Created: 12/03/2016		0.01	ndp
  *  Author: Chip
- * revision:	9/12/2016	v0.02	ndp	mod for FaceBoard
  */ 
 
-#include <avr/io.h>
 
-#include "mod_led.h"
+#ifndef SYSTIMER_H_
+#define SYSTIMER_H_
 
-void mod_led_init()
-{
-	DEV_LED_DDR |= (1<<DEV_LED_OUT_PIN);			// set HIGH for output
+// 1ms tic flags
+#define DEV_100US_TIC	0			// Device service tic
+//#define				GPIOR01
+//#define				GPIOR02
+//#define				GPIOR03
+// 1ms tic flags
+#define	DEV_1MS_TIC		4
+//#define				GPIOR05
+//#define				GPIOR06
+//#define				GPIOR07
 
-	return;
-}
+void st_init_tmr0();
 
-/*
- * Turn LED OFF
- */
-void mod_led_off()
-{
-	// Reverse logic for demo board use.
-	DEV_LED_PORT |= (1<<DEV_LED_OUT_PIN);			// set HIGH
 
-	return;
-}
-
-/*
- * Turn LED ON
- */
-void mod_led_on()
-{
-	// Reverse logic for demo board use.
-	DEV_LED_PORT &= ~(1<<DEV_LED_OUT_PIN);			// set LOW
-
-	return;
-}
-
-/*
- * Toggle LED ON n times.
- */
-void mod_led_toggle(uint8_t val)
-{
-	for(uint8_t i=0; i<val; ++i)
-	{
-		mod_led_on();
-		asm("nop");
-		asm("nop");
-		asm("nop");
-		mod_led_off();
-		asm("nop");
-		asm("nop");
-		asm("nop");
-	}
-}
+#endif /* SYSTIMER_H_ */

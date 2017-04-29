@@ -43,6 +43,8 @@
 #define	SIGNATURE_BYTE_2	0x93
 #define	SIGNATURE_BYTE_3	0x0B
 
+#define APP_START_ADRS		0x000F			// Word address of top of Interrupt Table +2.
+
 typedef enum cmdModes { CM_IDLE, CM_ADRS_HI, CM_ADRS_LO, CM_RECV_DATA, CM_RECV_SIZE, CM_SEND_DATA } CM_MODE;
 
 void commandProcess(uint8_t cmd);
@@ -63,6 +65,9 @@ uint8_t	appResetBytes[2];
 
 int main(void)
 {
+	void (*app)();
+	bool runBootloader = false;
+
 	mod_led_init();
 	mod_led_on();
 
@@ -72,18 +77,40 @@ int main(void)
 
 	uts_init(SLAVE_ADDRESS>>1);		// adj for standard use. (0xb0 -> 0x58)
 
-	initBootTimer(10);				// N * sec
+	initBootTimer(20);				// N * sec
 
 	putTxFifo(0x00);				// preload TxFifo to test for a Read.
 
 	while( waitBootTimeOut() ) {
+		uts_poll();					// Service non-interrupt I2C handler.
 		if( !isRxEmpty() || isTxEmpty() ) {
-			// Either a Write+data or a Read on I2C occurred. Activate Bootloader else check for app.
+			// Either a Write+data or a Read on I2C occurred. Enter Bootloader.
+			runBootloader = true;
 			break;
 		}
 	}
+	// Timed out. Jump to App if present, else Activate Bootloader.
+	if (runBootloader == false)
+	{
+		// Check for App
+		if( pgm_read_byte(APP_START_ADRS) != 0xFF)
+		{
+			// DEBUG
+			mod_led_toggle(3);
+
+			resetBootReset();				// overwrite App code reset vector just to make sure.
+
+			// App programmed
+			app = (void(*)())APP_START_ADRS;
+			app();	// Call app.
+		}
+		// No app. Fall though and run Bootloader.
+	}
 
 	mod_led_off();
+
+	// DEBUG
+	mod_led_toggle(5);
 
     while (1) 
     {
@@ -98,9 +125,11 @@ int main(void)
 
 void commandProcess(uint8_t cmd)
 {
-	switch(commandMode) {
+	switch(commandMode)
+	{
 		case CM_IDLE:									// Waiting for NEW command sequence
-			switch(cmd) {
+			switch(cmd)
+			{
 				case CMD_GET_STATUS:					// Request status
 					putTxFifo(systemStatus);
 					break;
@@ -206,8 +235,14 @@ bool waitBootTimeOut()
 		TIFR |= (1<<TOV1);				// clear OV flag
 
 		--bootWaitTime;
+		if(bootWaitTime % 2 == 0) {
+//			mod_led_off();
+		} else {
+//			mod_led_on();
+		}
 		if(bootWaitTime == 0) {
 			TCCR1 = 0;					// disable Timer1
+//			mod_led_off();
 			return false;
 		}
 	}

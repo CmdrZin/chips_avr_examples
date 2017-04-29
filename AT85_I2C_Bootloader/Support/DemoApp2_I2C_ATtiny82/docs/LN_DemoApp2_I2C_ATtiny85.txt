@@ -29,6 +29,14 @@ Commands:
 Arduino code working..commands not..check I2C lines..hmm..all ACKs..check code.
 oops, missing a break;, causing a fall through..fix..hah, works..need to 
 change LED resistor to 1k from 2.2k for better brightness.
+29apr17
+recheck. Arduino demo inop..debug LED ok, then zip..
+ADD: systimer.c,.h, mod_led.c,.h
+MOD: main.c .. add blink..hmm, DOH, bool uses ! not ~ to invert..fix..ok..
+DEBUG: LED toggles at START(4) and OV ISR(6) and loop(2)..not getting OV intr..
+toggle STOP(7) no STOP(5)..uninstall and go back to 1.6.13..debug messing up STOP 
+detect..fix..ok..working now. Stay with 1.6.13 for now.
+Try Bootloader..reprogram AT85 with Bootloader..
 
 
 

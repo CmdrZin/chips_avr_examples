@@ -1,6 +1,6 @@
 DN_BootloaderSlave.txt
 13mar17 ndp
-15mar17
+14apr17
 
 ref1: Atmel AVR112: TWI Bootloader for devices without boot section
 ref2: I2C_Bootloader_Layout.pdf - Diagram of test connections. (see[1]Fig 1-1)
@@ -15,11 +15,7 @@ Slave Target is ATtiny85, which code supports (Sort of).
 
 Slave I2C Address: 0x58 (0xb0)
 
-TODO	Add returnSig() to get back signature bytes.
-TODO	Use usiTwiSlaveNI[6] code to replace crap used.
-
-Change structure to NOT use Reset and BootEnable lines to control process.
-Still use WatchDog Timer for lock ups. Set for Max time .
+OPTION: Could use WDT to reset registers before jumping to App code.
 
 Use Register protocol:
 00	Status register - Default after any command.
@@ -40,7 +36,7 @@ To run app code, bootloader always jumps to first line after the vector table.
 	if LAST_INTVECT_ADDRESS+2 [0x001E] = 0xFF then stay in bootloader
 	else jump to LAST_INTVECT_ADDRESS+2 to run app code.
 
-3. If successful boot load, jump to LAST_INTVECT_ADDRESS+2 to run app code.
+3. If successful boot load, reset to use Step 2 to run app code.
 
 15mar17
 CHANGE: Add Slave commands

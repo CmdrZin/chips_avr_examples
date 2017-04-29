@@ -21,60 +21,29 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * mod_led.c
+ * mod_led.h
  *
  * Created: 5/18/2015		v0.01	ndp
  *  Author: Chip
  * revision:	9/12/2016	v0.02	ndp	mod for FaceBoard
  */ 
 
-#include <avr/io.h>
+#ifndef mod_led_H_
+#define mod_led_H_
 
-#include "mod_led.h"
+#if 0
+#define DEV_LED_DDR			DDRC
+#define DEV_LED_PORT		PORTC
+#define DEV_LED_OUT_PIN		PC2
+#else
+#define DEV_LED_DDR			DDRB
+#define DEV_LED_PORT		PORTB
+#define DEV_LED_OUT_PIN		PB1
+#endif
 
-void mod_led_init()
-{
-	DEV_LED_DDR |= (1<<DEV_LED_OUT_PIN);			// set HIGH for output
+void mod_led_init();
+void mod_led_off();
+void mod_led_on();
+void mod_led_toggle(uint8_t val);
 
-	return;
-}
-
-/*
- * Turn LED OFF
- */
-void mod_led_off()
-{
-	// Reverse logic for demo board use.
-	DEV_LED_PORT |= (1<<DEV_LED_OUT_PIN);			// set HIGH
-
-	return;
-}
-
-/*
- * Turn LED ON
- */
-void mod_led_on()
-{
-	// Reverse logic for demo board use.
-	DEV_LED_PORT &= ~(1<<DEV_LED_OUT_PIN);			// set LOW
-
-	return;
-}
-
-/*
- * Toggle LED ON n times.
- */
-void mod_led_toggle(uint8_t val)
-{
-	for(uint8_t i=0; i<val; ++i)
-	{
-		mod_led_on();
-		asm("nop");
-		asm("nop");
-		asm("nop");
-		mod_led_off();
-		asm("nop");
-		asm("nop");
-		asm("nop");
-	}
-}
+#endif /* mod_led_H_ */

@@ -32,6 +32,7 @@
 #include <Wire.h>
 
 #define  SLAVE_ADRS  0x40    // MUST match AVR chip I2C address
+#define  BOOT_ADRS   0x58    // MUST match AVR chip I2C address
 
 #define  CTRL_REG   0x01
 #define  RD_CNT     0x04
@@ -52,6 +53,17 @@ void setup()
 
 void loop()
 {
+#if 0
+  // Trigger Bootloader exit
+  // Send read message counter Command to Slave.
+  outBuff[0] = RD_CNT;                // A 0x00 turns OFF the LED. A 0x01 turns it ON.
+  cmdLen = 1;
+
+  Wire.beginTransmission(slave);      // identify the Slave to transmit to. Have to do this each time.
+  Wire.write(outBuff, cmdLen);        // send out data.
+  Wire.endTransmission();             // complete transmission.
+#else
+  // Do App
   // Send LED ON Command to Slave.
   outBuff[0] = LED_CTRL;                    // A 0x00 turns OFF the LED. A 0x01 turns it ON.
   outBuff[1] = 1;                    // A 0x00 turns OFF the LED. A 0x01 turns it ON.
@@ -61,7 +73,7 @@ void loop()
   Wire.write(outBuff, cmdLen);        // send out data.
   Wire.endTransmission();             // complete transmission.
 
-  delay(1000);                        // wait for 1 second.
+  delay(100);                        // wait for 1 second.
 
   // Send LED OFF Command to Slave.
   outBuff[0] = LED_CTRL;                    // A 0x00 turns OFF the LED. A 0x01 turns it ON.
@@ -72,8 +84,8 @@ void loop()
   Wire.write(outBuff, cmdLen);        // send out data.
   Wire.endTransmission();             // complete transmission.
 
-  delay(1000);                        // wait for 1 second.
-
+  delay(100);                        // wait for 1 second.
+#if 1
   // Send read message counter Command to Slave.
   outBuff[0] = RD_CNT;                // A 0x00 turns OFF the LED. A 0x01 turns it ON.
   cmdLen = 1;
@@ -90,8 +102,9 @@ void loop()
   Serial.print("Messages: ");
   Serial.print(d, DEC);
   Serial.println(" ");
-
-  delay(1000);                        // wait for 1 second.
+#endif
+  delay(100);                        // wait for 1 second.
+#endif
 
   ++count;
   Serial.print("Loops: ");

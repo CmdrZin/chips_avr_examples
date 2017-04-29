@@ -48,6 +48,9 @@ Change Activity:
 #include <avr/interrupt.h>
 #include "usiTwiSlave.h"
 
+//DEBUG
+#include "mod_led.h"
+
 /********************************************************************************
 
                             device dependent defines
@@ -438,7 +441,6 @@ usiTwiDataInReceiveBuffer(
 
 ISR( USI_START_VECTOR )
 {
-
   // set default starting conditions for new TWI package
   overflowState = USI_SLAVE_CHECK_ADDRESS;
 
@@ -460,7 +462,6 @@ ISR( USI_START_VECTOR )
 
   if ( !( PIN_USI & ( 1 << PIN_USI_SDA ) ) )
   {
-
     // a Stop Condition did not occur
 
     USICR =
@@ -478,7 +479,6 @@ ISR( USI_START_VECTOR )
   }
   else
   {
-
     // a Stop Condition did occur
     USICR =
          // enable Start Condition Interrupt
@@ -519,6 +519,7 @@ Only disabled when waiting for a new Start Condition.
 
 ISR( USI_OVERFLOW_VECTOR )
 {
+mod_led_toggle(6);
 
   switch ( overflowState )
   {
