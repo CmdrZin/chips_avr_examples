@@ -1,6 +1,6 @@
 LN_ProgrammableTimer.txt
 30jan17 ndp
-08may17
+03mar17
 
 Log Notes for Programmable Timer board
 
@@ -107,66 +107,21 @@ MOD: main.c - Add UI process..
 Added 'C' command to enter Self Check mode.
 10mar17
 ADD: mod_epLog.c, .h
-Store <tag> first, then one or two time_t values. <tag> will determine the 
-number of time_t values.
+Store <tag> first, then one or two time_t values. <tag> will determine the number of 
+time_t values.
 Maintain an me_NextAdrs value to manage storage location.
 void me_store(uint8_t tag, time_t event);
-void me_store(uint8_t tag, time_t event1, time_t event2);	// Overload function.
+void me_store(uint8_t tag, time_t event1, time_t event2);		// Overload function.
 11mar17
 Added code for logging ACK, Snooze, and NoAction times..
 Add log formatter..ok..
-03apr17
-Add 'V' command to return version and build date..ok..add to TimerUIc..'v' 
-works..ok..commit 216
-BUG..'d' key does not work after using 'e' to erase EERAM..FIX..ok..
-Remove extra LFCR from log entry..ok..commit 217
-21apr17 10:00-
-Fix audio clear..add Log End..test..commit 223
-26apr17
-Moved to new system. Fix T5 delay. rev 0.30 commint 4
-28apr17
-Add Release folder for HEX code.
-Bullet proof ma_isPlaying()..
-MOD: mod_audio.c..change tone call..beeps 1 less than repeat and RED led stays 
-ON until sleep ends then finishs last beep, may just start last beep then cut
-off?..remove BEEP2 as redundant..set tone if not going to SERVICE_NONE..HAH, 
-almost fixed..beeps one less than repeat val..4k is louder than 5k..3k is 
-quieter than 5k..added 3 song placeholders and another beep..all good.
-03may17
-Audio Tune/ACK/Snooze review. 
-BUG?: ma_setService() not clearing ma_step to 0. If non-0, noteAdrs is not updated and 
-new tune doesn't start until last tune finishes..fix..ok..set end pause of all tunes to 250..
-MOD: main.c - remove 2s wait in S_SNOOZE case..add RED led blink if in Snooze..
-hmm..blinked once after Snooze..Green LED blinks after ACK..ah, sleep check in 
-S_SNOOZE..fix..ok..
-MOD: eeprom_util.c - EEPROM_write() add verify..disable then enable interrupts on write..ok..
-Opps, found another BUG. When Event is not ACK'd or Snoozed after 1 min? Lock up, 
-but still have serial. No blinks. Only way if goToSleep never true.
-SIDE: increase Awake time in Pre-Check from 0.5s to 2s.
-REDOing process. Normal, PreCheck, and Event done. TODO: Snooze.
-04may17
-MOD: main.c - Major rewrite of process loop.[2]..ver 0.50..
-05may17
-Oops. Even PRECheck and Normal need Awake/Sleep states to allow LED blink.
-Add 200ms awake time to each..ok..test..
-PreCheck: RED - GREEN - RED - ... ok. Press ACK ok. GREEN only..ok
-Normal: GREEN blink. ok. run UId..oops, for got the 10sec awake extend if comms..
-fix..change twoSecTime to awakeCount..
-Event loading and other commands can now take place in PreCheck mode.
-06may17
-Repeat tone avery 10 sec..ok..ACK anytime..ok..Logged event ACK..ok..
-Triple beep on Snooze. LED RED stay ON..hmm..Snooze Asleep need 2 awake window..
-fix..need to be able to ACK while in Snooze. Waiting until awake again make no sense.
-change..ok..still need non-response test.
-NOTE: Can keep Snoozing 10 sec wakeup cycle forever.
-07may17
-Try long term test with unit #5 on battery..plays each 10 seconds for about 
-2 minutes, then goes quite with RED/GREEN blink each 8 seconds.
-Went off 10 min later. ACK'd..ok..will Snooze next one..seems ok..
-Program #5 and give a weeks worth of Events.
-08may17
-remove button press memory. Could retain button pressed from another state..
-Only use buttons presses while scan takes place. rev 0.51
+
+
+
+
+
+
+
 
 
 

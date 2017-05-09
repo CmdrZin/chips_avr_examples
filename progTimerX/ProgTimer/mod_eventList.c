@@ -70,8 +70,6 @@ time_t me_getLastEvent()
 
 /*
  * Check list for a time less than local time.
- * Return the ones place of seconds (0-9) on a match and save Event time,
- * ELSE return 10 if no match.
  */
 char mod_eventList_check()
 {

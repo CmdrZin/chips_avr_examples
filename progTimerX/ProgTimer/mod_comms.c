@@ -25,10 +25,8 @@
  *
  * Created: 1/31/2017 9:39:18 PM
  *  Author: Chip
- * revision:	04/03/2017		0.02	ndp		Add 'V' command
  */ 
 #include <avr/io.h>
-#include <avr/pgmspace.h>
 
 #include "sysTimer.h"
 #include "mod_comms.h"
@@ -37,9 +35,7 @@
 #include "mod_eventList.h"
 #include "mod_epLog.h"
 
-
 // In main.c
-extern const char version_date[] PROGMEM;		// Version and Build Date
 void setSelfCheck();
 
 uint16_t dev_bin2BCD(uint8_t data);
@@ -58,7 +54,6 @@ void mod_comms_service()
 	uint16_t	val;
 	time_t	eTime;
 	uint8_t tag;
-	uint8_t x;
 
 	switch(mc_comm_mode)
 	{
@@ -116,17 +111,6 @@ void mod_comms_service()
 					// Read Local Time
 					case 'T':
 						mc_comm_mode = MC_SEND_LOCAL;
-						break;
-
-					case 'V':
-						strcpy_P(mc_outBuff, version_date);		// Copy string to buffer.
-						x = 0;
-						while(mc_outBuff[x] != 0) {
-							sendChar(mc_outBuff[x]);
-							++x;
-						}
-						sendChar(10);		// LF
-						sendChar(13);		// CR
 						break;
 
 					default:
@@ -257,16 +241,6 @@ void mod_comms_service()
 				// Next LOG entry.
 				tag = me_getLog(1, mc_outBuff);
 			}
-			// Send Log End
-			sendChar('L');
-			sendChar('o');
-			sendChar('g');
-			sendChar(' ');
-			sendChar('E');
-			sendChar('n');
-			sendChar('d');
-			sendChar(10);		// LF
-			sendChar(13);		// CR
 			mc_comm_mode = MC_IDLE;
 			break;
 

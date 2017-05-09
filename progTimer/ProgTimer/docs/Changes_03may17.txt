@@ -1,0 +1,12 @@
+Changes_03may17.txt
+03may17 ndp
+
+Rev: 0.40 and 0.41
+
+1. Audio left-over tune bug fixed.
+
+2. Verify added to EEPROM write.
+
+3. RED LED now blinks if in Snooze mode.
+
+4. Added slight pause after long tunes.

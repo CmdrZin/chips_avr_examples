@@ -25,7 +25,6 @@
  *
  * Created: 3/10/2017 12:57:11 PM
  *  Author: Chip
- * revision:	04/03/2017		0.20	ndp		Fix 'e' bug. Note reseting address for use again.
  */ 
 #include <avr/io.h>
 
@@ -74,7 +73,6 @@ void me_clear()
 	for(uint16_t i=0; i<0x03FF; i++) {
 		EEPROM_write(i, 0xFF);
 	}
-	me_init();								// reset for use by next Event.
 }
 
 
@@ -135,6 +133,8 @@ uint8_t me_getLog(uint8_t init, char* buff) {
 		return 0;
 	}
 
+	*buffer++ = 10;			// LF
+	*buffer++ = 13;			// CR
 	*buffer = 0;
 
 	return tag;

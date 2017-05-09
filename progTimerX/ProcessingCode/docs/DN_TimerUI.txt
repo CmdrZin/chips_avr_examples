@@ -1,0 +1,7 @@
+DN_TimerUI.txt
+06mar17 ndp
+
+
+Design Notes for User UI for Programmable Timer
+
+

@@ -1,6 +1,6 @@
 RD_ProgrammableTimer.txt
 30jan17 ndp
-21apr17
+09mar17
 
 Other options:
 https://store.ti.com/EZ430-CHRONOS-915-Chronos-Wireless-development-tool-in-a-watch-P1736.aspx
@@ -12,7 +12,7 @@ Reference Design for Programmable Timer board
 
 ref1: The Function List.docx
 
-Target: ATmega328PA-AU (TQFP-32), 1 MHz, 9600 baud, 512 bytes EEPROM
+Target: ATmega328PA-AU (TQFP-32), 1 MHz, 9600 baud.
 Power-Save 1MHz 3v ~0.002ma -> >10 yrs with 2032 (240mAh).
 2032/2025 20mm coin cell 3V or
  USB FTDI (3.3V or 5.0V) for development.
@@ -30,8 +30,6 @@ Use IsoTime format:	YYYY-MM-DD HH:MM:SS (19 char)
 
 Sleeps for 8 seconds, wakes for 2 to check for comm, extends to 10 seconds if
 comm detected.
-NOTE: The buttons are only scanned when the unit wakes up OR when a tone/tune 
-is playing.
 
 COMMANDS
 'L'	Load list item into RAM. Index: 0-249 (0x00-0xFA)
@@ -54,7 +52,6 @@ Returns 'O' 'K' 0D if accepted or '?' 0D if not.
 Returns YYYY-MM-DD HH:MM:SS 0D or '?' 0D
 
 'C'	Enter Self Check mode
-Returns 'C' '-' 'O' 'K' 0A 0D
 
 'D'	Dump EEPROM data
 Reads out Tags and Time in ASCII formatted text.
@@ -66,10 +63,6 @@ Reads out Tags and Time in ASCII formatted text.
 
 'E'	Erase EEPROM
 	Zeros EEPROM data.
-Returns 'E' '-' 'O' 'K' 0A 0D
-
-'V'	Return verson and build date.
-	0.20	2017-03-11 17:23:22 0D
 
 Tones
 0 - Two 250ms 4kHz tones 500ms apart
@@ -88,18 +81,17 @@ Hold down BOTH buttons until both LEDs flash On and Off then release the
 buttons.
 When beeper sounds and the RED LED starts flashing, press either button to 
 stop the beeps and stop the flashing. This is the acknowlege operation.
-
 Pre-Use condition Self-Check Mode
 Red - Green LEDs alternate flash every eight seconds when timer wakes up.
-Press the 'A' button to acknowledge and then only the Green LED will blink 
+Press the 'A' button to acknowledge and then only the Green LED wil blink 
 each 8 seconds and the event trigger process will be enabled.
 NOTE: If this is done after the first event has been passed, that event 
 will trigger on the next wake-up. Any other events that have pass times 
 will also trigger each wake-up until all past events have been serviced.
 
 Mute Switch
-The Mute switch is a mechanical switch that disconnects the beeper. The 
-device does not know what position the switch is in.
+The Mute switch is a mechanical switch that disconnects the beeper. The device 
+does not know what position the switch is in.
 
 Event Signals[1]
 1. Seconds = S0

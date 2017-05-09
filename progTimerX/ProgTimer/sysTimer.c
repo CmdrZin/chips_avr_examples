@@ -62,7 +62,6 @@ void st_init_tmr0()
 
 /*
  * Set up Timer2 to generate Wake-Up after 249.86ms using 1 MHz CPU clock.
- * or Wake-up after 8 seconds using 32kHz clock.
  * Call this once after RESET.
  */
 void st_init_tmr2()

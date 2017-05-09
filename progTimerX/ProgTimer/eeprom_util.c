@@ -31,8 +31,6 @@
  */
 
 #include <avr/io.h>
-#include <stdbool.h>
-#include <avr/interrupt.h>
 
 #include "eeprom_util.h"
 
@@ -43,33 +41,18 @@
  */
 void EEPROM_write(unsigned int ucAddress, unsigned char ucData)
 {
-	unsigned char newData = ucData;					// save for verify
-	bool verifyed = false;
-
-	cli();
- 
-	do
-	{
-		/* Wait for completion of previous write */
-		while(EECR & (1<<EEPE))
-		;
-		/* Set Programming mode */
-		EECR = (0<<EEPM1)|(0<<EEPM0);				// 0 0: Erase and Write (3.4ms)
-		/* Set up address and data registers */
-		EEAR = ucAddress;
-		EEDR = ucData;
-		/* Write logical one to EEMPE */
-		EECR |= (1<<EEMPE);
-		/* Start eeprom write by setting EEPE */
-		EECR |= (1<<EEPE);
-		
-		// Verify
-		if(newData == EEPROM_read(ucAddress)) {
-			verifyed = true;
-		}
-	} while (!verifyed);
-
-	sei();
+	/* Wait for completion of previous write */
+	while(EECR & (1<<EEPE))
+	;
+	/* Set Programming mode */
+	EECR = (0<<EEPM1)|(0<<EEPM0);				// 0 0: Erase and Write (3.4ms)
+	/* Set up address and data registers */
+	EEAR = ucAddress;
+	EEDR = ucData;
+	/* Write logical one to EEMPE */
+	EECR |= (1<<EEMPE);
+	/* Start eeprom write by setting EEPE */
+	EECR |= (1<<EEPE);
 }
 
 

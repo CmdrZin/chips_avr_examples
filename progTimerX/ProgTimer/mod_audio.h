@@ -40,8 +40,7 @@
 */
 typedef enum ma_isr {MA_ISR_SQUARE, MA_ISR_SIN, MA_ISR_TRIANGLE, MA_ISR_SAW} MA_ISR_SERVICE;
 
-typedef enum ma_serviceType {MA_SERVICE_NONE, MA_SERVICE_BEEP, MA_SERVICE_SCORE1, MA_SERVICE_SCORE2, 
-	MA_SERVICE_SCORE3, MA_SERVICE_SCORE4, MA_SERVICE_SCORE5, MA_SERVICE_SCORE6, MA_SERVICE_SCORE7} MA_SERVICE_TYPE;
+typedef enum ma_serviceType {MA_SERVICE_NONE, MA_SERVICE_BEEP, MA_SERVICE_SCORE1, MA_SERVICE_SCORE2} MA_SERVICE_TYPE;
 
 
 // Notes..1MHz clock using DDS and 256 point sin wave table.
@@ -85,7 +84,6 @@ typedef enum ma_serviceType {MA_SERVICE_NONE, MA_SERVICE_BEEP, MA_SERVICE_SCORE1
 
 
 void ma_init();
-void ma_clearAudio();
 void ma_setBeepParam(uint16_t freq, uint8_t duration, uint8_t repetition);
 void ma_setService(MA_SERVICE_TYPE val);
 bool ma_isPlaying();

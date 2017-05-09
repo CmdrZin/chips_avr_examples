@@ -46,14 +46,13 @@
 MA_ISR_SERVICE	isrMode;			// which type of waveform to play.
 MA_SERVICE_TYPE	ma_serviceMode;
 
-volatile bool		toneON;
+bool		toneON;
 bool		ma_playTune;
-uint8_t		ma_step = 0;
 uint16_t	accumStep;
 uint16_t	accumulator;
 uint16_t	pwmValue;
-volatile uint16_t	ma_duration;				// N * ms
-volatile uint8_t		ma_loopCount;
+uint16_t	ma_duration;				// N * ms
+uint8_t		ma_loopCount;
 uint8_t		lastStep;
 uint8_t		toneDelay;
 
@@ -62,13 +61,8 @@ uint8_t		ma_beepDuration;
 uint8_t		ma_beepRepeat;
 
 const char ma_sinTable112[];				// MUST be declared before use.
+const uint16_t ma_tune00[];
 const uint16_t ma_tune01[];
-const uint16_t ma_tune02[];
-const uint16_t ma_tune03[];
-const uint16_t ma_tune04[];
-const uint16_t ma_tune05[];
-const uint16_t ma_tune06[];
-const uint16_t ma_tune07[];
 
 void ma_init()
 {
@@ -81,25 +75,10 @@ void ma_init()
 	ma_serviceMode = MA_SERVICE_NONE;
 	isrMode = MA_ISR_SQUARE;
 
-	ma_clearAudio();
+	// Set I/O for output
+	//	SPEAKER_DDR |= (1<<SPEAKER_POUT);	// set as output.
 
 	toneDelay = 10;					// N * 10ms delay.
-}
-
-/*
-* ma_clearAudio()
-* Reset audio flags, states, and other variables to stop tone/tune.
-*/
-void ma_clearAudio()
-{
-	// Clear variables
-	ma_serviceMode = MA_SERVICE_NONE;
-	ma_playTune = false;
-	// Turn hardware OFF
-	TCCR1A &= ~(1<<COM1A1);
-	TCCR1A &= ~(1<<COM1A0);
-	SPEAKER_DDR &= ~(1<<SPEAKER_POUT);		// set as input. Turn OFF.
-	TIMSK1 = 0;								// disable interrupt on OCA match.
 }
 
 void ma_setBeepParam(uint16_t freq, uint8_t duration, uint8_t repetition)
@@ -107,13 +86,9 @@ void ma_setBeepParam(uint16_t freq, uint8_t duration, uint8_t repetition)
 	ma_beepFreq = freq;
 	ma_beepDuration = duration;
 	ma_beepRepeat = repetition;
-//	if(ma_beepRepeat == 0) ++ma_beepRepeat;
-	++ma_beepRepeat;							// needed due to countdown logic
+	if(ma_beepRepeat == 0) ++ma_beepRepeat;
 }
 
-/*
- * Set up Tone/Tune parameters for ma_service()
- */
 void ma_setService(MA_SERVICE_TYPE val)
 {
 	switch(val)
@@ -126,7 +101,7 @@ void ma_setService(MA_SERVICE_TYPE val)
 		TIMSK1 = 0;								// disable interrupt on overflow.
 		break;
 
-		// Configure Timer1 for square wave tone. All BEEPs serviced here.
+		// Configure Timer1 for square wave tone.
 		case MA_SERVICE_BEEP:
 		ma_serviceMode = MA_SERVICE_BEEP;
 		isrMode = MA_ISR_SQUARE;
@@ -138,52 +113,34 @@ void ma_setService(MA_SERVICE_TYPE val)
 
 		// Configure Timer1 for musical notes.
 		case MA_SERVICE_SCORE1:
-		case MA_SERVICE_SCORE2:
-		case MA_SERVICE_SCORE3:
-		case MA_SERVICE_SCORE4:
-		case MA_SERVICE_SCORE5:
-		case MA_SERVICE_SCORE6:
-		case MA_SERVICE_SCORE7:
-//		ma_serviceMode = MA_SERVICE_SCORE1;
-		ma_serviceMode = val;
+		ma_serviceMode = MA_SERVICE_SCORE1;
 		isrMode = MA_ISR_SIN;
 		// Set up Timer1. Set OC1A at BOTTOM:Clear on OCR1A Match, Fast PWM 8-bit(5), clk/1(001),
 		TCCR1A = (1<<COM1A1) | (0<<COM1A0) | (0<<COM1B1) | (0<<COM1B0) | (0<<WGM11) | (1<<WGM10);
 		TCCR1B = (0<<WGM13) | (1<<WGM12) | (0<<CS12) | (0<<CS11) | (1<<CS10);	// Clk/1
-		ma_step = 0;
 		ma_playTune = true;
 		break;
 
-		default:
-		ma_serviceMode = MA_SERVICE_NONE;
-		TCCR1A &= ~(1<<COM1A1);					// Turn OFF.
-		TCCR1A &= ~(1<<COM1A0);					// Turn OFF.
-		SPEAKER_DDR &= ~(1<<SPEAKER_POUT);		// set as input. Turn OFF.
-		TIMSK1 = 0;								// disable interrupt on overflow.
+		// Configure Timer1 for musical notes.
+		case MA_SERVICE_SCORE2:
+		ma_serviceMode = MA_SERVICE_SCORE2;
+		isrMode = MA_ISR_SIN;
+		// Set up Timer1. Set OC1A at BOTTOM:Clear on OCR1A Match, Fast PWM 8-bit(5), clk/1(001),
+		TCCR1A = (1<<COM1A1) | (0<<COM1A0) | (0<<COM1B1) | (0<<COM1B0) | (0<<WGM11) | (1<<WGM10);
+		TCCR1B = (0<<WGM13) | (1<<WGM12) | (0<<CS12) | (0<<CS11) | (1<<CS10);	// Clk/1
+		ma_playTune = true;
 		break;
 	}
 }
 
-/*
-* Audio in process check.
-* Return TRUE is there is a Tone/Tune playing.
-* Used to wait until Tone/Tune completes.
-*/
 bool ma_isPlaying()
 {
-//	return (ma_serviceMode != MA_SERVICE_NONE);
-	if(ma_serviceMode == MA_SERVICE_NONE)
-	{
-		return false;
-	}
-	else
-	{
-		return true;
-	}
+	return ma_playTune;
 }
 
 void ma_service()
 {
+	static uint8_t ma_step = 0;
 	static uint8_t notes;
 	static uint16_t* noteAdrs;
 
@@ -196,191 +153,67 @@ void ma_service()
 		break;
 
 		case MA_SERVICE_BEEP:
-		if (GPIOR0 & (1<<AUDIO_10MS_TIC))
-		{
-			GPIOR0 &= ~(1<<AUDIO_10MS_TIC);			// clear flag
-			if(--toneDelay == 0)
+			if (GPIOR0 & (1<<AUDIO_10MS_TIC))
 			{
-				toneDelay = 50;					// N * 10ms delay.
-//				ma_tone(ma_beepFreq, ma_beepDuration);
-				if(--ma_beepRepeat == 0)
+				GPIOR0 &= ~(1<<AUDIO_10MS_TIC);			// clear flag
+				if(--toneDelay == 0)
 				{
-					ma_serviceMode = MA_SERVICE_NONE;
-				}
-				else
-				{
+					toneDelay = 50;					// N * 10ms delay.
 					ma_tone(ma_beepFreq, ma_beepDuration);
+					if(--ma_beepRepeat == 0) ma_serviceMode = MA_SERVICE_NONE;
 				}
 			}
-		}
-		break;
+			break;
 
 		case MA_SERVICE_SCORE1:
-		if(ma_playTune && !toneON)
-		{
-			if(ma_step == 0) {
-				noteAdrs = ma_tune05;
-				notes = pgm_read_word(noteAdrs);
+			if(ma_playTune && !toneON)
+			{
+				if(ma_step == 0) {
+					noteAdrs = ma_tune00;
+					notes = pgm_read_word(noteAdrs);
+					++noteAdrs;
+				}
+				note = pgm_read_word(noteAdrs);
 				++noteAdrs;
-			}
-			note = pgm_read_word(noteAdrs);
-			++noteAdrs;
-			dur = pgm_read_word(noteAdrs);
-			++noteAdrs;
+				dur = pgm_read_word(noteAdrs);
+				++noteAdrs;
 
-			ma_tone(note, dur);
+				ma_tone(note, dur);
 
-			if(++ma_step >= notes) {
-				ma_step = 0;
-				ma_playTune = false;
-				ma_serviceMode = MA_SERVICE_NONE;
+				if(++ma_step >= notes) {
+				  ma_step = 0;
+				  ma_playTune = false;
+				}
 			}
-		}
-		break;
+			break;
 
 		case MA_SERVICE_SCORE2:
-		if(ma_playTune && !toneON)
-		{
-			if(ma_step == 0) {
-				noteAdrs = ma_tune01;
-				notes = pgm_read_word(noteAdrs);
+			if(ma_playTune && !toneON)
+			{
+				if(ma_step == 0) {
+					noteAdrs = ma_tune01;
+					notes = pgm_read_word(noteAdrs);
+					++noteAdrs;
+				}
+				note = pgm_read_word(noteAdrs);
 				++noteAdrs;
-			}
-			note = pgm_read_word(noteAdrs);
-			++noteAdrs;
-			dur = pgm_read_word(noteAdrs);
-			++noteAdrs;
-
-			ma_tone(note, dur);
-
-			if(++ma_step >= notes) {
-				ma_step = 0;
-				ma_playTune = false;
-				ma_serviceMode = MA_SERVICE_NONE;
-			}
-		}
-		break;
-
-		case MA_SERVICE_SCORE3:
-		if(ma_playTune && !toneON)
-		{
-			if(ma_step == 0) {
-				noteAdrs = ma_tune02;
-				notes = pgm_read_word(noteAdrs);
+				dur = pgm_read_word(noteAdrs);
 				++noteAdrs;
+
+				ma_tone(note, dur);
+
+				if(++ma_step >= notes) {
+					ma_step = 0;
+					ma_playTune = false;
+				}
 			}
-			note = pgm_read_word(noteAdrs);
-			++noteAdrs;
-			dur = pgm_read_word(noteAdrs);
-			++noteAdrs;
-
-			ma_tone(note, dur);
-
-			if(++ma_step >= notes) {
-				ma_step = 0;
-				ma_playTune = false;
-				ma_serviceMode = MA_SERVICE_NONE;
-			}
-		}
-		break;
-
-		case MA_SERVICE_SCORE4:
-		if(ma_playTune && !toneON)
-		{
-			if(ma_step == 0) {
-				noteAdrs = ma_tune03;
-				notes = pgm_read_word(noteAdrs);
-				++noteAdrs;
-			}
-			note = pgm_read_word(noteAdrs);
-			++noteAdrs;
-			dur = pgm_read_word(noteAdrs);
-			++noteAdrs;
-
-			ma_tone(note, dur);
-
-			if(++ma_step >= notes) {
-				ma_step = 0;
-				ma_playTune = false;
-				ma_serviceMode = MA_SERVICE_NONE;
-			}
-		}
-		break;
-
-		case MA_SERVICE_SCORE5:
-		if(ma_playTune && !toneON)
-		{
-			if(ma_step == 0) {
-				noteAdrs = ma_tune04;
-				notes = pgm_read_word(noteAdrs);
-				++noteAdrs;
-			}
-			note = pgm_read_word(noteAdrs);
-			++noteAdrs;
-			dur = pgm_read_word(noteAdrs);
-			++noteAdrs;
-
-			ma_tone(note, dur);
-
-			if(++ma_step >= notes) {
-				ma_step = 0;
-				ma_playTune = false;
-				ma_serviceMode = MA_SERVICE_NONE;
-			}
-		}
-		break;
-
-		case MA_SERVICE_SCORE6:
-		if(ma_playTune && !toneON)
-		{
-			if(ma_step == 0) {
-				noteAdrs = ma_tune06;
-				notes = pgm_read_word(noteAdrs);
-				++noteAdrs;
-			}
-			note = pgm_read_word(noteAdrs);
-			++noteAdrs;
-			dur = pgm_read_word(noteAdrs);
-			++noteAdrs;
-
-			ma_tone(note, dur);
-
-			if(++ma_step >= notes) {
-				ma_step = 0;
-				ma_playTune = false;
-				ma_serviceMode = MA_SERVICE_NONE;
-			}
-		}
-		break;
-
-		case MA_SERVICE_SCORE7:
-		if(ma_playTune && !toneON)
-		{
-			if(ma_step == 0) {
-				noteAdrs = ma_tune07;
-				notes = pgm_read_word(noteAdrs);
-				++noteAdrs;
-			}
-			note = pgm_read_word(noteAdrs);
-			++noteAdrs;
-			dur = pgm_read_word(noteAdrs);
-			++noteAdrs;
-
-			ma_tone(note, dur);
-
-			if(++ma_step >= notes) {
-				ma_step = 0;
-				ma_playTune = false;
-				ma_serviceMode = MA_SERVICE_NONE;
-			}
-		}
-		break;
+			break;
 
 		default:
-		ma_serviceMode = MA_SERVICE_NONE;
-		ma_step = 0;
-		ma_playTune = false;
-		break;
+			ma_serviceMode = MA_SERVICE_NONE;
+			ma_step = 0;
+			ma_playTune = false;
+			break;
 	}
 }
 
@@ -485,58 +318,14 @@ char ma_getSinVal( uint8_t index )
 	return( pgm_read_byte(&ma_sinTable112[index]) );
 }
 
-// Notes MA_C3 -> MA_B6 are available.
+const uint16_t ma_tune00[] PROGMEM = {
+	8,
+	MA_A5, 250, 0, 100, MA_C5, 250, 0, 100, MA_G5, 250, 0, 100, MA_C5, 250, 0, 50
+};
 
-// (9)
 const uint16_t ma_tune01[] PROGMEM = {
 	10,
-	MA_A5, 250, 0, 100, MA_D5, 250, 0, 100, MA_B5, 250, 0, 100, MA_G5, 200, 0, 50, MA_A5, 250, 0, 250
-};
-
-// (6) Jingle Bells
-const uint16_t ma_tune02[] PROGMEM = {
-	24,
-	MA_B5, 125, 0, 100, MA_B5, 125, 0, 100, MA_B5, 250, 0, 100, MA_B5, 125, 0, 100, MA_B5, 125, 0, 100, MA_B5, 250, 0, 100,
-	MA_B5, 125, 0, 100, MA_D6, 125, 0, 100, MA_G5, 125, 0, 100, MA_A5, 125, 0, 100, MA_B5, 250, 0, 250, 0, 250, 0, 250    
-};
-
-// (7)
-const uint16_t ma_tune03[] PROGMEM = {
-	41,
-	MA_E5, 125, 0, 100, MA_D5, 125, 0, 100, MA_G5, 125, 0, 100, MA_A5, 125, 0, 100, MA_E5, 125, 0, 100,
-	MA_D5, 125, 0, 100, MA_C5, 250, 0, 100, MA_B4, 125, 0, 100, MA_B4, 62, 0, 100, MA_B4, 62, 0, 100,
-	MA_D5, 125, 0, 100, MA_F5, 125, 0, 100, MA_A5, 125, 0, 100, MA_D6, 125, 0, 100, MA_C6, 250, 0, 100,
-	MA_B5, 250, 0, 100, MA_A5, 125, MA_A5, 250, 0, 100, MA_B5, 125, 0, 100, MA_C6, 250, 0, 250, 0, 250, 0, 250
-};
-
-// (8)
-const uint16_t ma_tune04[] PROGMEM = {
-	41,
-	MA_E4, 125, 0, 100, MA_D4, 125, 0, 100, MA_G4, 125, 0, 100, MA_A4, 125, 0, 100, MA_E4, 125, 0, 100,
-	MA_D4, 125, 0, 100, MA_C4, 250, 0, 100, MA_B4, 125, 0, 100, MA_B3, 62, 0, 100, MA_B3, 62, 0, 100,
-	MA_D4, 125, 0, 100, MA_F4, 125, 0, 100, MA_A4, 125, 0, 100, MA_D5, 125, 0, 100, MA_C5, 250, 0, 100,
-	MA_B4, 250, 0, 100, MA_A4, 125, MA_A4, 250, 0, 100, MA_B4, 125, 0, 100, MA_C5, 250, 0, 250, 0, 250, 0, 250
-};
-
-// (5) Old ACK
-const uint16_t ma_tune05[] PROGMEM = {
-	8,
-	MA_A5, 250, 0, 100, MA_C5, 250, 0, 100, MA_G5, 250, 0, 100, MA_C5, 250, 0, 250
-};
-
-// (3)
-const uint16_t ma_tune06[] PROGMEM = {
-	13,
-	MA_C5, 250, 0, 100, MA_E5, 125, 0, 100, MA_E5, 62, 0, 100, MA_E5, 62, 0, 100, MA_G5, 250, MA_G5, 250, 
-	0, 250, 0, 250, 0, 250
-};
-
-// (4)
-const uint16_t ma_tune07[] PROGMEM = {
-	28,
-	MA_C5, 125, 0, 100, MA_C5, 125, 0, 100, MA_G5, 250, 0, 100, MA_A5, 125, 0, 100, MA_F5, 125, 0, 100,
-	MA_G5, 250, 0, 100, MA_A5, 125, 0, 100, MA_B5, 125, 0, 100, MA_C6, 125, 0, 100, MA_A5, 125, 0, 100,
-	MA_G5, 125, 0, 100, MA_D5, 125, 0, 100, MA_C5, 250, 0, 250, 0, 250, 0, 250
+	MA_A5, 250, 0, 100, MA_D5, 250, 0, 100, MA_B5, 250, 0, 100, MA_G5, 200, 0, 50, MA_A5, 250, 0, 50
 };
 
 const char ma_sinTable112[] PROGMEM = {

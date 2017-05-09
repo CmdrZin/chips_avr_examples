@@ -29,7 +29,6 @@
  *  Author: Chip
  * revised:	01/31/2017		0.02	ndp		For code development use.
  * revised: 02/16/2017		0.03	ndp		for Programmable Timer board rev1.1.
- * revised: 05/08/2017		0.04	ndp		for Programmable Timer board rev1.1..no button memory
  */ 
 
 
@@ -122,7 +121,6 @@ void mod_io_service()
 				case IO_BOTH_LED:
 					ilb_setGreenLed(true);
 					ilb_setRedLed(true);
-					break;
 
 				default:
 					break;
@@ -182,9 +180,6 @@ uint8_t mod_io_getButtons()
  */
 void ilb_scanButtons()
 {
-	// Button has to be pressed during scan. No memory.
-	ilb_buttons = 0;				// clear
-
 	if( BUTTON_GREEN_PIN & (1<<BUTTON_GREEN_P) )
 	{
 		// Button is UP..clear flag.

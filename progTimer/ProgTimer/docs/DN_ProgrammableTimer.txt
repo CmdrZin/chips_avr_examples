@@ -1,12 +1,16 @@
 DN_ProgrammableTimer.txt
 30jan17 ndp
-05mar17
+05may17
 
 
 Design Notes for Programmable Timer board
 
 ref1: ATtiny328PA datasheet
 ref2: RD_ProgrammableTimer.txt
+
+Releases:
+0.30	2017-26-04	Improved audio code.
+
 
 Target: ATmega328PA-AU (TQFP-32), 1 MHz, 9600 baud
 2032/2025 20mm coin cell 3V or Tripple AAA batterry pack (3.6V/4.5V)
@@ -58,7 +62,7 @@ NOTE: The 1s place of seconds is used to select the tone to be played 0-9.
 IsoTime ASCII entries seperated by CR (13).
 	NN (19 bytes) CR (19 bytes) CR ...
 
-'W'	Write list into EEPROM. Copies RAM table into EEPROM.
+*'W'	Write list into EEPROM. Copies RAM table into EEPROM.
 Returns 'O' 'K' 0D if successful or 'F' 'A' 'I' 'L' 0D if not.
 
 'S'	Set time of day (20 bytes)(see 'L' command)
@@ -69,7 +73,23 @@ Returns 'O' 'K' 0D if accepted or '?' 0D if not.
 Returns YYYY-MM-DD HH:MM:SS 0D or '?' 0D
 
 'C'	Enter Self Check mode
-	'C' 'H' 'E' 'C' 'K'
+	'C' '-' 'O' 'K' 0A 0D
+
+'D'	Dump EEPROM data
+Reads out Tags and Time in ASCII formatted text.
+<tag> YYYY-MM-DD HH:MM:SS [YYYY-MM-DD HH:MM:SS]
+<tag>
+	1	Normal ACK on event. Event time.
+	2	Snooze activated. Event time. Final ACK time.
+	3	No Action taken within 30 min. Event time.
+
+'E'	Erase EEPROM
+	Zeros EEPROM data.
+Returns 'E' '-' 'O' 'K' 0A 0D
+
+'V'	Return verson and build date.
+	0.20	2017-MAR-11 17:23:22 0D
+
 
 Process
 service_events
@@ -92,8 +112,8 @@ time_t mod_parse(char* str) - NULL terminated string or 22 char max. Return
 Audio
 Notes and Tones. Need to reconfigure Timer1 as needed.
 Tones
-0 - Two 250ms 4kHz tones 500ms apart
-1 - One 250ms 4kHz tone
+0 - Two 250ms 4kHz beeps 500ms apart
+1 - Three 250ms 5kHz beeps
 2
 3
 4
@@ -102,6 +122,9 @@ Tones
 7
 8
 9 - Tune (5 notes)
+
+NOTE: The buttons are only scanned when the unit wakes up OR when a tone/tune 
+is playing.
 
 Time Check
 On AWAKE - Scan list for Event < LocalTime. If TRUE, trigger Beeps and 
@@ -196,3 +219,254 @@ Maintain an me_NextAdrs value to manage storage location.
 void me_store(uint8_t tag, time_t event);
 void me_store(uint8_t tag, time_t event1, time_t event2);		// Overload function.
 void me_getLog(uint8_t init);	// send 0 to reset eeprom address.
+
+
+Audio (mod_audio.c)
+Beep: analysis
+To use
+call ma_setService( MA_SERVICE_BEEP )
+	Sets ma_serviceMode = MA_SERVICE_BEEP
+	Sets isrMode = MA_ISR_SQUARE
+	Sets TCCR1A and TCCR1B for OCR1A match and fast clock
+	Sets toneDeleay = 1;
+call ma_setBeepParam( freq, duration, repititions )
+	Sets ma_beepFreq = freq (use defined values ONLY)
+	Sets ma_beepDuration = duration (in ms)
+	Sets ma_beepRepeat (set to 1 if 0)
+
+03may17
+Tune: analysis
+To use
+	eTone != 10, then set eState = 1
+
+	During Awake time (goToSleep = false, eState == 0), the three services are called.
+		mod_io_service() - blink LED and scan buttons.
+		mod_comms_service() - only effects serial comm.
+		ma_service() - will play tune if ma_play_tune = true.
+
+ACK, Snooze, Non-service Modes: analysis
+Revamp this into nested state machines.
+
+NEW PROCESS
+Initializaton:
+eState = PRECHECK
+
+Loop:
+	service io
+	service comms
+	service audio
+
+	if(audioPlaying)
+		skipSleep = true;
+	else
+		skipSleep = false;
+
+	if GoToSleep && !skipSleep
+		setup cpu sleep and awake on Timer2 INTR
+		// Awake 8 seconds later. Clock is updated in ISR.
+		Decide which LED to blink
+			if eState = NORMAL, Green
+			if eState = PRECHECK, toggle Red-Green
+			if eState = SNOOZE_AWAKE or SNOOZE_ASLEEP, Red
+			if eState = EVENT_AWAKE or EVENT_ASLEEP, both
+	end (else don't go to sleep until audio finishes)
+
+   if(!skipSleep)
+	// Only run this block if coming out of Sleep. Simplifies logic.
+	switch(eState)
+		case NORMAL:
+			// Allow for LED blink after waking.
+			goToSleep = false;		// use manual control
+			if(10ms TIC)
+				clear TIC flag
+				if(--twoSecondTime == 0)
+					twoSecondTime = 20;	// hijack timer for shorter 200ms
+					goToSleep = true;	// sleep the 7.8 seconds left.
+				end
+			end
+
+			eTone = checkEventList();
+			if((eTone < 0) || (eTone > 9))	// usually 10 for no event.
+				no event
+			else
+				// Valid Tone/Tune select is 0->9
+				triggerBeepTone(eTone);
+				// init timers and counters
+				oneMinuteTime = 10;	// uses ten second timer
+				twoSecondTime = 200;	// uses 10ms TIC
+				tenMinTime = 75;	// uses 8 second sleep timer
+				tenMinCount = 3;	// maximum nuber of 10 min waits
+				tenSecondTime = 1000;	// uses 10ms TIC 
+				GoToSleep = false;	// use manual time control
+				eState = EVENT_AWAKE
+			end
+			break;
+
+		case PRECHECK:
+			// Waiting for PreCheck ACK. Check for 2 seconds after waking.
+			goToSleep = false;		// use manual control
+			if(10ms TIC)
+				clear TIC flag
+				if(--twoSecondTime == 0)
+					twoSecondTime = 200;
+					goToSleep = true;	// sleep the 6 seconds left.
+				end
+			end
+			// ACK is checked for 2 seconds after 8s wakeup.
+			buttons = getButtons()
+			if(B_ACK)
+				clear audio (stop any beep/tune)
+				triggerBeep(0)
+				eState = NORMAL
+				goToSleep = true.	// Go back to sleep
+			end
+			break;
+
+		case EVENT_AWAKE:
+			// under manual control, not sleeping
+			// Processing EVENT Trigger
+			// ACK or Snooze button can be pressed an ANY time.
+			buttons = getButtons()
+			if(B_ACK)
+				clear audio (stop any beep/tune)
+				triggerBeep(0)
+				Store Event to log as EPT_ACK,eventTime.
+				eState = NORMAL
+				goToSleep = true.	// Go back to sleep
+				break;
+			end
+
+			if(B_SNOOZE)
+				clear audio (stop any beep/tune)			
+				triggerBeep(0)
+				// Wait until Snooze ends or is ACK'd to store to Log.
+				eState = SNOOZE_ASLEEP
+				// Timers and counter have already been setup.
+				goToSleep = true.	// Go back to sleep while in Snooze
+				break;
+			end
+
+			// Play tune every 10 seconds
+			// After 1 minute. go to sleep for 10 minutes. repeat 3 times.
+			if(10ms TIC)
+				clear TIC flag
+				if( --tenSecondTime == 0)
+					// ten seconds timer out. Play tune/tone every 10 seconds.
+					tenSecondTime = 1000;
+					triggerBeepTune(eTone);
+
+					if( --oneMinuteTime == 0)
+						// one minute time out
+						oneMinuteTime = 10;
+						// No respose. Go to sleep for 10 minutes.
+						twoSecondTime = 200;
+						tenMinTime = 75;	// uses 8 second sleep timer
+						eState = EVENT_ASLEEP;
+						goToSleep = true;
+					end
+				end
+			end
+			break;
+
+		case EVENT_ASLEEP:
+			// allow 2 seconds to detect ACK or Snooze button, then go to sleep
+			// for the remaining 6 seconds.
+			if(twoSecondTime != 0)
+				// ACK or Snooze button can be pressed within 2 seconds after awake.
+				buttons = getButtons()
+				if(B_ACK)
+					clear audio (stop any beep/tune)
+					triggerBeep(0)
+					Store Event to log as EPT_ACK,eventTime.
+					eState = NORMAL
+					goToSleep = true.	// Go back to sleep
+					break;
+				end
+
+				if(B_SNOOZE)
+					clear audio (stop any beep/tune)			
+					triggerBeep(0)
+					// Wait until Snooze ends or is ACK'd to store to Log.
+					eState = SNOOZE
+					// Timers and counter have already been setup.
+					goToSleep = true.	// Go back to sleep while in Snooze
+					break;
+				end
+				--twoSecondTime;
+				goToSleep = false;		// manual control for 2 seconds.
+			else
+				// decrement time and counts on wake up
+				if(--tenMinTime == 0)
+					tenMinTime = 75
+					// ten minute time out
+					if(--tenMinCount == 0)
+						// gone through 3 ten minute periods. Log it.
+						log EPT_NOACTION, time
+						eState = NORMAL
+					else
+						triggerBeepTune(eTone)	// beep/tune again after 10 min
+					end
+				end
+				goToSleep = true;
+			end
+			break;
+
+		case SNOOZE_AWAKE:
+			// Only Snooze for 10 min. No button checks.
+			// Check ACK for 2 seconds after waking.
+			goToSleep = false;		// use manual control
+			// ACK is checked for 1 minute after 8s wakeup while playing tune.
+			buttons = getButtons()
+			if(B_ACK)
+				clear audio (stop any beep/tune)
+				triggerBeep(0)
+				Store Event to log as EPT_SNOOZE,eventTime.
+				eState = NORMAL
+				goToSleep = true.	// Go back to sleep
+				break;
+			end
+
+			// Play tune every 10 seconds
+			// After 1 minute. go to sleep for 10 minutes.
+			if(10ms TIC)
+				clear TIC flag
+				if( --tenSecondTime == 0)
+					// ten seconds timer out. Play tune/tone every 10 seconds.
+					tenSecondTime = 1000;
+					triggerBeepTune(eTone);
+
+					if( --oneMinuteTime == 0)
+						// one minute time out
+						oneMinuteTime = 10;
+						// No respose. Go to sleep for 10 minutes.
+						twoSecondTime = 200;
+						tenMinTime = 75;	// uses 8 second sleep timer
+						eState = SNOOZE_ASLEEP;
+						goToSleep = true;
+					end
+				end
+			end
+			break;
+
+		case SNOOZE_ASLEEP:
+			// Stay asleep for 10 seconds more
+			// decrement time and counts on wake up
+			if(--tenMinTime == 0)
+				// ten minute time out
+				tenMinTime = 75;
+				triggerBeepTune(eTone)	// beep/tune again after 10 min
+				eState = SNOOZE_AWAKE;
+			end
+			goToSleep = true;
+			break;
+
+		default:
+			eState = NORMAL;
+			goToSleep = true;
+					
+  end (!skipSleep)
+
+
+
+
+

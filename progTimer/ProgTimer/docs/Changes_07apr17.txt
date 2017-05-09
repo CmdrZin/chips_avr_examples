@@ -1,0 +1,23 @@
+Changes_07apr17.txt
+21apr17 ndp
+
+
+1. Code check for possible reset condition. (done, nothing found)
+	Reset by pluging in USB/FDTI
+	Reset by code flow.
+
+2. Move Event list to EERAM.(see #5)
+
+3. Add more Tunes. 1,2,3,4
+
+4. Use internal pull-up on RST line. Already has internal one.
+
+5. Store st_localTime in EEPROM. Store me_events[] in EEPROM.
+Note enough space. RAM should not get cleared anyway.
+
+
+6. Add 'End Log' to EEPROM Log output to indicate last entry.
+   Good if there's no log.(done)
+
+7. Add clear audio call to reset tone/tune being played.(done)
+
