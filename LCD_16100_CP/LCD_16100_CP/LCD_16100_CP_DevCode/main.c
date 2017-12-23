@@ -48,7 +48,8 @@
 
 #define SLAVE_ADRS		0x5E
 
-typedef enum {M_CMD, M_CTRL, M_BUTTONS, M_BUTTONS_RAW, M_ADC, M_LCD_TEXT, M_LCD_PTEXT, M_G_LED, M_R_LED, M_Y_LED} M_SERVICE_TYPE;
+typedef enum {M_CMD, M_CTRL, M_BUTTONS, M_BUTTONS_RAW, M_ADC, M_LCD_TEXT, M_LCD_PTEXT, 
+	M_LCD_PTEXT_O, M_LCD_TEXT_G, M_G_LED, M_R_LED, M_Y_LED} M_SERVICE_TYPE;
 
 /*
  * main()
@@ -60,6 +61,10 @@ int main(void)
 {
 	uint8_t	data;
 	M_SERVICE_TYPE	service = M_CMD;
+	uint8_t msgLength;
+	uint8_t msgOffset;
+	uint8_t msgCharCnt;
+	char msgBuff[16];
 	
 	uint8_t cmdRevCnt = 0;
 	uint8_t dataRevCnt = 0;
@@ -75,9 +80,6 @@ int main(void)
 	sei();							// Enable global interrupts.
 
 	twiSlaveEnable();
-		
-	// Output RESET banner
-	
 		
 	while(1)
 	{
@@ -163,6 +165,42 @@ int main(void)
 					service = M_CMD;
 					break;
 					
+				// SDA_W 0x10 LEN D[0] ... D[N]
+				case M_LCD_TEXT:
+					++dataRevCnt;
+
+					msgLength = data;
+					msgOffset = 0;
+					msgCharCnt = 0;
+					service = M_LCD_TEXT_G;
+					break;
+					
+				// SDA_W 0x11 LEN POS D[0] ... D[N]
+				case M_LCD_PTEXT:
+					++dataRevCnt;
+
+					msgLength = data;
+					service = M_LCD_PTEXT_O;
+					break;
+					
+				case M_LCD_PTEXT_O:
+					++dataRevCnt;
+
+					msgOffset = data;
+					msgCharCnt = 0;
+					service = M_LCD_TEXT_G;
+					break;
+
+				case M_LCD_TEXT_G:
+					++dataRevCnt;
+
+					msgBuff[msgCharCnt] = data;
+					if(++msgCharCnt >= msgLength) {
+						setTextOff(msgBuff, msgLength, msgOffset);
+						service = M_CMD;
+					}
+					break;
+
 				case M_G_LED:
 					++dataRevCnt;
 
@@ -194,7 +232,7 @@ int main(void)
 			// Be careful of overflowing tText buffer. Limit 16+1 char.
 			tCount = snprintf(tText,17,"CMD:%02d  DATA:%02d ", cmdRevCnt, dataRevCnt);
 //			tCount = snprintf(tText,17,"CMD:%02d  DATA:%02X ", cmdRevCnt, data);
-			setText(tText, tCount);
+//			setText(tText, tCount);
 		}
 	}
 }

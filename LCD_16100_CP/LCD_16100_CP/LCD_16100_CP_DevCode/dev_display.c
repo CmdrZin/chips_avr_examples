@@ -15,7 +15,7 @@
 
 #include "dev_display.h"
 
-#define LCD_REV	"0.1"
+#define LCD_REV	"0.2"
 
 char buffer[2][8];				// display buffer..text is written here from I2C command and transfered to display during service.
 bool newTextFlag;				// set after changing buffer data to cause display update.

@@ -37,12 +37,15 @@
 
 #define  SLAVE_ADRS  0x5E        // MUST match AVR chip I2C address
 
-
-#define MLCD_TEXT    1
-
 #define IO_GET_BUTTONS           0x01
 #define IO_GET_BUTTONS_LEN       1
 #define IO_GET_BUTTONS_DATA_LEN  1
+
+#define M_LCD_TEXT      0x10
+#define M_LCD_TEXT_LEN  2       // + text data
+
+#define M_LCD_PTEXT     0x11
+#define M_LCD_PTEXT_LEN 3       // + text data
 
 #define IO_GREEN_LED    0x20
 #define IO_RED_LED      0x21
@@ -64,7 +67,7 @@
 int slave = SLAVE_ADRS;   // has to be an int.
 byte count = 0;           // simple counter
 int cmdLen;
-uint8_t outBuff[16];
+uint8_t outBuff[18];
 
 void setup()
 {
@@ -158,25 +161,35 @@ void loop()
   delay(1);                          // need to give Slave time to fill ouput FIFO if needed.
 #endif
 
-#if 0
-  outBuff[0] = makeHeader( 8-3 );
-  outBuff[1] = MOD_LCD_ID;
-  outBuff[2] = MLCD_TEXT;
-  outBuff[3] = 2;
-  outBuff[4] = 'H';
-  outBuff[5] = 'e';
-  outBuff[6] = ' ';
-  outBuff[7] = '7';
+#if 1
+  // use up all 8 char or 16 char spaces
+  outBuff[0] = M_LCD_TEXT;
+  outBuff[1] = 16;
+  outBuff[2] = 'H';
+  outBuff[3] = 'e';
+  outBuff[4] = 'l';
+  outBuff[5] = 'l';
+  outBuff[6] = 'o';
+  outBuff[7] = ' ';
+  outBuff[8] = '2';
+  outBuff[9] = '0';
+  outBuff[10] = '1';
+  outBuff[11] = '7';
+  outBuff[12] = ' ';
+  outBuff[13] = 'T';
+  outBuff[14] = 'o';
+  outBuff[15] = 'd';
+  outBuff[16] = 'a';
+  outBuff[17] = 'y';
     
-  cmdLen = 8;
+  cmdLen = M_LCD_TEXT_LEN + outBuff[1];
 
 #if(SERIAL_USB == 1)
   Serial.print(outBuff[0], HEX);
   Serial.print(" ");
   Serial.print(outBuff[1], HEX);
   Serial.print(" ");
-  Serial.print(outBuff[2], HEX);
-  Serial.print(" ");
+  Serial.print(outBuff[2]);
   Serial.println(outBuff[3]);
 #endif
 
