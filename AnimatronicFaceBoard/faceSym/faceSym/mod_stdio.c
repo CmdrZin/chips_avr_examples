@@ -30,6 +30,7 @@
  *
  * Created: 7/23/2016 10:31:52 PM
  *  Author: Chip
+ * Revised:	12/25/2017	0.01	ndp	Support for updated LCD display
  */ 
 #include <avr/io.h>
 #include <stdbool.h>
@@ -37,87 +38,52 @@
 #include "mod_stdio.h"
 #include "twi_I2CMaster.h"
 
-#define MOD_LCD_CONTROL_I2C		0x60
+#define MOD_LCD_CONTROL_I2C		0x5E
 
-#define MOD_LCD_DISPlAY		4
-#define MOD_IO_LEDS_BUTTONS	5
-
-uint8_t msp_makeHeader( uint8_t len );
-void bin2hex(uint8_t* buff, uint8_t val);
-
-uint8_t msp_buff[16];
-char hexBuff[8];
-
+uint8_t msp_buff[20];
 
 /*
- * Line 1: Start at 0
- * Line 2: Start at 8
+ *
  */
-void mod_stdio_print( uint8_t line, char* buffer, uint8_t nbytes )
+void mod_stdio_print( char* buffer, uint8_t nbytes )
 {
-	for(uint8_t i=0; i<16; i++) { msp_buff[i] = ' '; }
+	// Pre-fill buffer with spaces
+	for(uint8_t i=0; i<sizeof(msp_buff); i++) { msp_buff[i] = ' '; }
 
-	msp_buff[0] = msp_makeHeader( nbytes+1 );				// data part of packet
-	msp_buff[1] = MOD_LCD_DISPlAY;							// LCD display ID
-	msp_buff[2] = 0x01;										// print CMD
-	msp_buff[3] = line;
+	msp_buff[0] = LCD_TEXT;
+	msp_buff[1] = nbytes;
 	// copy text
 	for( uint8_t i=0; i<nbytes; i++ )
 	{
-		msp_buff[i+4] = buffer[i];
+		msp_buff[i+2] = buffer[i];
 	}
-	// Send packet.
-	tim_write( MOD_LCD_CONTROL_I2C, msp_buff, nbytes+4 );
+	// Send packet.	
+	tim_write( MOD_LCD_CONTROL_I2C, msp_buff, nbytes+2 );
 }
 
 /*
- * Print 2 char Hex value.
- * TODO: Change this to a utility to return 2 HEX char.
+ *
  */
-void mod_stdio_print2Hex( char* buff, uint8_t val1, uint8_t val2 )
+void mod_stdio_printOffset( char* buffer, uint8_t nbytes, uint8_t offset )
 {
-	hexBuff[0] = ' ';
-	hexBuff[1] = buff[0];
-	hexBuff[2] = buff[1];
-	hexBuff[3] = ':';
-	mod_stdio_bin2hex(&hexBuff[4], val1);
-	mod_stdio_bin2hex(&hexBuff[6], val2);
-	mod_stdio_print(2, (char*)hexBuff, 8);
+	msp_buff[0] = LCD_PTEXT;
+	msp_buff[1] = nbytes;
+	msp_buff[2] = offset;
+	// copy text
+	for( uint8_t i=0; i<nbytes; i++ )
+	{
+		msp_buff[i+3] = buffer[i];
+	}
+	// Send packet.
+	tim_write( MOD_LCD_CONTROL_I2C, msp_buff, nbytes+3 );
 }
 
-void mod_stdio_bin2hex( char* buff, uint8_t val )
-{
-	uint8_t temp;
-	
-	temp = val>>4;
-	if(temp > 9) {
-		buff[0] = temp - 10 + 'A';
-		} else {
-		buff[0] = temp + '0';
-	}
-	temp = val & 0x0F;
-	if(temp > 9) {
-		buff[1] = temp - 10 + 'A';
-		} else {
-		buff[1] = temp + '0';
-	}
-}
-
+// NO parameter checks
 void mod_stdio_led( uint8_t led, bool state )
 {
-	msp_buff[0] = msp_makeHeader( 1 );
-	msp_buff[1] = MOD_IO_LEDS_BUTTONS;
-	msp_buff[2] = led;						// LED CMD code per define in header.
-	msp_buff[3] = (state) ? 1 : 0;
-	// Send packet.
-	tim_write( MOD_LCD_CONTROL_I2C, msp_buff, 4 );
-}
+	msp_buff[0] = led;
+	msp_buff[1] = (state) ? 1 : 0;
 
-uint8_t msp_makeHeader( uint8_t len )
-{
-	uint8_t temp;
-	
-	temp = ((~len) << 4) & 0xF0;    // shift and mask
-	temp = temp | (len & 0x0F);
-	return (temp);
+	// Send packet.
+	tim_write( led, msp_buff, 2 );
 }

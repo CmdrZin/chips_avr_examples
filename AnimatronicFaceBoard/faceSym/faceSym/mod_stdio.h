@@ -25,6 +25,7 @@
  *
  * Created: 7/23/2016 10:32:15 PM
  *  Author: Chip
+ * Revision: 12/25/2017		0.01	ndp	update to new LCD API
  */ 
 
 
@@ -34,15 +35,19 @@
 #include <avr/io.h>
 #include <stdbool.h>
 
-#define MOD_IO_GREEN_LED	0x10
-#define MOD_IO_RED_LED		0x11
-#define MOD_IO_YELLOW_LED	0x12
+#define LCD_CTRL				0x00
+#define LCD_GET_BUTTONS			0x01
+#define LCD_GET_BUTTONS_RAW		0x02
+#define LCD_GET_ADC				0x03
+#define LCD_TEXT				0x10
+#define LCD_PTEXT				0x11
+#define LCD_SET_GREEN_LED		0x20
+#define LCD_SET_RED_LED			0x21
+#define LCD_SET_YELLOW_LED		0x22
 
-void mod_stdio_print( uint8_t line, char* buffer, uint8_t nbytes );
-void mod_stdio_print2Hex( char* buff, uint8_t val1, uint8_t val2 );
+void mod_stdio_print( char* buffer, uint8_t nbytes );
+void mod_stdio_printOffset( char* buffer, uint8_t nbytes, uint8_t offset );
 
 void mod_stdio_led( uint8_t led, bool state );
-
-void mod_stdio_bin2hex(char* buff, uint8_t val);
 
 #endif /* MOD_STDIO_H_ */

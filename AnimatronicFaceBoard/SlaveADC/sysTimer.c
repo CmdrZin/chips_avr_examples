@@ -64,11 +64,19 @@ void st_init_tmr0()
 
 /*
  * Return milliseconds since Power-On-Reset.
+ * Even though volatile, four byte value must be protected from change.
  */
 uint32_t st_millis()
 {
-	return totalMilliseconds;
+	uint32_t temp;
+	
+	cli();
+	temp = totalMilliseconds;
+	sei();
+	
+	return temp;
 }
+
 
 /*
  * Timer0 CTC (compare) interrupt service.

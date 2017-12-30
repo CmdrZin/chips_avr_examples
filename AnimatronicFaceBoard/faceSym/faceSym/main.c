@@ -45,12 +45,13 @@
 
 int main(void)
 {
-#if 0
+#if 1
 	st_init_tmr0();
 	mod_led_init();
 	tim_init();
 	adc_support_init();
 	mod_serial_init();
+	ma_init();			// set up for PWM timer audio.
 
 	sei();				// Enable interrupts
 
@@ -61,8 +62,9 @@ int main(void)
 
 	while(1)
 	{
-		adc_support_service();
-		mod_system_service();
+		adc_support_service();	// Inputs
+		mod_system_service();	// System
+		ma_service();			// Audio
 	}
 #else
 	st_init_tmr0();

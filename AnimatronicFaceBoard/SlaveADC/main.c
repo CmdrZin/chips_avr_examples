@@ -51,11 +51,7 @@ void mTest02();
 /*
  * main()
  *
- * This is a sequential scheduler that services all available tasks
- * and then checks for a complete message and forwards it to the 
- * addressed task access process.
- *
- * Each task manages their own time slice.
+ * Each service manages their own time slice.
  *
  */
 int main(void)

@@ -36,6 +36,7 @@
 typedef enum { MSS_IDLE, MSS_RUN, MSS_MANUAL, MSS_MENU } MSS_STATES;
 
 void mod_system_init();
+void mod_systey_setKeyFrame(uint8_t chan, uint8_t pos);
 void mod_system_service();
 MSS_STATES mod_system_getState();
 

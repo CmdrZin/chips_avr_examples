@@ -39,6 +39,8 @@
 #define SPEAKER_PORT	PORTD
 #define SPEAKER_POUT	PD5				// OC1A
 
+#define TONE_DELAY		2000			// N * 1ms
+
 bool		toneON;
 uint16_t	accumStep;
 uint16_t	accumulator;
@@ -46,8 +48,6 @@ uint16_t	pwmValue;
 uint16_t	ma_duration;				// N * ms
 uint8_t		ma_loopCount;
 uint8_t		lastStep;
-
-uint8_t		toneDelay;
 
 const char ma_sinTable[];				// MUST be declared before use.
 const char ma_sinTable112[];				// MUST be declared before use.
@@ -63,27 +63,24 @@ void ma_init()
 
 	// Set I/O for output
 	SPEAKER_DDR |= (1<<SPEAKER_POUT);	// set as output.
-
-	toneDelay = 100;					// N * 10ms delay.
 }
 
 
 void ma_service()
 {
 	static uint8_t ma_step = 0;
-
+	static uint32_t lastTime = 0;
+	uint32_t currentTime;
+	
 	uint16_t note;
-	#if 0
-	if (GPIOR0 & (1<<AUDIO_10MS_TIC))
+	#if 1
+	currentTime = st_millis();
+	
+	if (currentTime > (lastTime+TONE_DELAY))
 	{
-		GPIOR0 &= ~(1<<AUDIO_10MS_TIC);			// clear flag
-
-		if(--toneDelay == 0)
-		{
-			toneDelay = 100;					// N * 10ms delay.
-			ma_tone((800), 500);				// ~1kHz
-			//			ma_tone((32*256), 3500);			// ~10kHz top limit
-		}
+		lastTime = currentTime;
+		ma_tone((1600), 200);				// ~2kHz
+		//			ma_tone((32*256), 3500);			// ~10kHz top limit
 	}
 	#else
 	#if 0
@@ -198,57 +195,57 @@ void ma_service()
 			switch(ma_step)
 			{
 				case 0:
-				note = MA_B4;
+				note = MA_B6;
 				dur = 250;
 				break;
 
 				case 1:
-				note = MA_B4;
+				note = MA_B6;
 				dur = 250;
 				break;
 
 				case 2:
-				note = MA_B4;
+				note = MA_B6;
 				dur = 500;
 				break;
 
 				case 3:
-				note = MA_B4;
+				note = MA_B6;
 				dur = 250;
 				break;
 
 				case 4:
-				note = MA_B4;
+				note = MA_B6;
 				dur = 250;
 				break;
 
 				case 5:
-				note = MA_B4;
+				note = MA_B6;
 				dur = 500;
 				break;
 
 				case 6:
-				note = MA_B4;
+				note = MA_B6;
 				dur = 250;
 				break;
 
 				case 7:
-				note = MA_D5;
+				note = MA_D7;
 				dur = 250;
 				break;
 
 				case 8:
-				note = MA_G4;
+				note = MA_G6;
 				dur = 250;
 				break;
 
 				case 9:
-				note = MA_A4;
+				note = MA_A6;
 				dur = 250;
 				break;
 
 				case 10:
-				note = MA_B4;
+				note = MA_B6;
 				dur = 500;
 				break;
 
@@ -258,12 +255,12 @@ void ma_service()
 				break;
 
 				case 12:
-				note = MA_A6;
+				note = MA_A8;
 				dur = 500;
 				break;
 
 				case 13:
-				note = MA_B6;
+				note = MA_B8;
 				dur = 500;
 				break;
 
@@ -315,7 +312,7 @@ ISR(TIMER1_OVF_vect)
 			toneON = false;
 			SPEAKER_DDR &= ~(1<<SPEAKER_POUT);		// set as input. Turn OFF.
 			TIMSK1 = 0;								// disable interrupt on overflow.
-			} else {
+		} else {
 			ma_loopCount = 78;
 		}
 	}

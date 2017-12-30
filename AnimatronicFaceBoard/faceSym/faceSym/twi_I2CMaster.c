@@ -79,6 +79,9 @@ void tim_init()
 
 void tim_write( uint8_t sla, uint8_t* buffer, uint8_t nbytes )
 {
+	// Wait for last xmit to finish
+	while( tim_isBusy());
+
 	// Copy address to buffer
 	timTxBuffer[0] = (sla<<1);
 	// Copy data to local buffer.
@@ -103,6 +106,9 @@ bool tim_isBusy()
 
 void tim_read( uint8_t sla, uint8_t nbytes )
 {
+	// Wait for last xmit to finish
+	while( tim_isBusy());
+
 	// Copy address to buffer
 	timTxBuffer[0] = (sla<<1)|(1);
 	timTxBufferBytes = 1;							// just send adrs

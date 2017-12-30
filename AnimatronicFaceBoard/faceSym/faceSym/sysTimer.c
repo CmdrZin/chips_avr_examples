@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2016 Nels D. "Chip" Pearson (aka CmdrZin)
+ * Copyright (c) 2016-2017 Nels D. "Chip" Pearson (aka CmdrZin)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,7 @@
  *
  * Created: 5/19/2015	0.01	ndp
  * Author: Chip
+ * revised: 9/09/2017	0.10	ndp replace GPIO tics with st_millis() function.
  *
  * ALL timers based on 20MHz CPU clock.
  */ 
@@ -36,22 +37,14 @@
 
 #include "sysTimer.h"
 
-#define SLOW_TIC		10			// 1ms * N for the slow tic
-
-uint8_t	st_cnt_10ms;				// secondary timer counter.
-
-volatile uint8_t st_tmr2_count;
+static volatile uint32_t	totalMilliseconds;		// Total millisecond since POR.
+													// Use static to restrict scope to this module.
 
 /*
  * Set up Timer0 to generate System Time Tic for 1 ms using 20MHz CPU clock
  * Call this once after RESET.
  *
- * Modifies: OCR0A, TCCR0A, TIMSK0, TCCR0B, and GPIOR0
- *
- * input reg:	none
- * output reg:	none
- * resources:	R16
- *
+ * Modifies: OCR0A, TCCR0A, TIMSK0, TCCR0B
  * NOTE: 1ms
  */
 void st_init_tmr0()
@@ -64,38 +57,31 @@ void st_init_tmr0()
 
 	TCCR0B =  0b100;			// CPU div 256
 
-	st_cnt_10ms = SLOW_TIC;
-
-	GPIOR0 = 0;					// clear all tic flags
+	totalMilliseconds = 0L;
 
 	return;
 }
 
 /*
+ * Return milliseconds since Power-On-Reset.
+ * Even though volatile, four byte value must be protected from change.
+ */
+uint32_t st_millis()
+{
+	uint32_t temp;
+	
+	cli();
+	temp = totalMilliseconds;
+	sei();
+	
+	return temp;
+}
+
+/*
  * Timer0 CTC (compare) interrupt service.
  * Called each 1ms
- *
- * input reg:	none
- * output reg:	none
- * resources:	GPIOR0.GPIR00:7
- * 				SRAM	1 byte
- *				Stack:3
- *
  */
 ISR(TIMER0_COMPA_vect)
 {
-	// tic1ms flags
-	GPIOR0 |= (1 << 0);
-	GPIOR0 |= (1 << 1);
-	GPIOR0 |= (1 << 2);
-	GPIOR0 |= (1 << 3);
-
-	if( --st_cnt_10ms == 0 )
-	{
-		GPIOR0 |= (1 << 4);
-		GPIOR0 |= (1 << 5);
-		GPIOR0 |= (1 << 6);
-		GPIOR0 |= (1 << 7);
-		st_cnt_10ms = SLOW_TIC;
-	}
+	++totalMilliseconds;
 }

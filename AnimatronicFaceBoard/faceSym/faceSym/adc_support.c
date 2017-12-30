@@ -55,15 +55,21 @@ void adc_support_init()
 }
 
 /*
- * Process (1ms steps)
+ * Read one channel every 1ms. 8ms to read all eight channels.
+ * Process - Called continuously (self timed 1ms steps)
  * 0. Read as_channel
  * 1. inc as_channel and reset to 0 if == 8
  */
 void adc_support_service()
 {
-	if( GPIOR0 & (1<<ADC_1MS_TIC) )
+	static uint32_t lastTime = 0;
+	uint32_t currentTime;
+	
+	currentTime = st_millis();
+	
+	if( currentTime > lastTime )
 	{
-		GPIOR0 &= ~(1<<ADC_1MS_TIC);
+		lastTime = currentTime;
 		
 		as_data[as_channel] = as_startWaitRead(as_channel);		// Trigger-Wait-Read
 

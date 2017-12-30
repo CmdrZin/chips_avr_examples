@@ -26,6 +26,7 @@
  * Created: 5/19/2015 1:06:23 PM
  *  Author: Chip
  * revision: 8/1/2015	0.01	ndp
+ * revised: 9/09/2017	0.10	ndp replace GPIO tics with st_millis() function.
  */ 
 
 
@@ -34,18 +35,7 @@
 
 #include <avr/io.h>
 
-// 1ms tic flags
-#define DEV_1MS_TIC		0			// Device service tic
-#define ADC_1MS_TIC		1
-//#define				2
-//#define				3
-// 10ms tic flags
-#define	MSS_10MS_TIC	4
-#define	AUDIO_10MS_TIC	5
-//#define				6
-#define	TEST_10MS_TIC	7
-
 void st_init_tmr0();
-
+uint32_t st_millis();
 
 #endif /* SYSTIMER_H_ */
