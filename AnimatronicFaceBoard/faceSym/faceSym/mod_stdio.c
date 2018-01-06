@@ -79,6 +79,9 @@ void mod_stdio_printOffset( char* buffer, uint8_t nbytes, uint8_t offset )
 }
 
 // NO parameter checks
+/*
+ * GREEN: 0x20	RED: 0x21	YELLOW: 0x22
+ */
 void mod_stdio_led( uint8_t led, bool state )
 {
 	msp_buff[0] = led;

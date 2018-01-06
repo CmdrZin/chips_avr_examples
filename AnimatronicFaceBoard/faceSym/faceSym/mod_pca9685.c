@@ -77,7 +77,7 @@ void mp_setPos( uint8_t chan, uint16_t pos )
 
 	++mp_buff[0];
 	mp_buff[1] = 0x00;
-	tim_write( MP_ADRS, mp_buff, 2);		// n_ON_L
+	tim_write( MP_ADRS, mp_buff, 2);		// n_ON_H
 	while( tim_isBusy());
 
 	++mp_buff[0];

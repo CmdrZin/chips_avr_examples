@@ -54,7 +54,7 @@
 #define TWI_BUS_ERROR              0x00  // Bus error due to an illegal START or STOP condition
 
 
-#define TWI_MASTER_BUFF_SIZE	16
+#define TWI_MASTER_BUFF_SIZE	32
 
 uint8_t timTxBuffer[TWI_MASTER_BUFF_SIZE];
 uint8_t timTxBufferBytes;
@@ -170,14 +170,13 @@ ISR( TWI_vect )
 
 		case TWI_MRX_ADR_ACK:				// SLA+R has been transmitted and ACK received
 			timRxBufferPtr = 0;				// Set buffer pointer start
-			if (timRxBufferPtr < timRxBufferBytes )		// Check for zero read.
+			if (timRxBufferPtr < timRxBufferBytes-1 )		// Check for one byte read.
 			{
 				TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWEA);
 			}
 			else
 			{
 				TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT);		// NACK
-				timBusy = false;
 // DEBUG++
 //				PORTD &= ~(1<<PORTD0);	// set LOW
 // DEBUG--
@@ -220,6 +219,10 @@ ISR( TWI_vect )
 		case TWI_MTX_ADR_NACK:		// SLA+W has been transmitted and NACK received
 		case TWI_MRX_ADR_NACK:		// SLA+R has been transmitted and NACK received
 		case TWI_MTX_DATA_NACK:		// Data byte has been transmitted and NACK received
+			TWCR = (1<<TWEN)|(1<<TWINT)|(1<<TWSTO);	// Initiate a STOP condition.
+			timBusy = false;
+			break;
+
 		case TWI_BUS_ERROR:			// Bus error due to an illegal START or STOP condition
 		default:
 		    // Reset TWI Interface
