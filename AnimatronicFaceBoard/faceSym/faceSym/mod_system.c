@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2016 Nels D. "Chip" Pearson (aka CmdrZin)
+ * Copyright (c) 2016-2018 Nels D. "Chip" Pearson (aka CmdrZin)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,12 +25,14 @@
  *
  * Created: 7/27/2016 10:54:23 AM
  *  Author: Chip
+ * Revised: 1/09/2018	ndp		0.10	For use with faceAnim system
  */ 
 
 #include <avr/io.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <avr/pgmspace.h>
 
 #include "mod_system.h"
 #include "sysTimer.h"
@@ -42,8 +44,10 @@
 
 char* getNameString( MSS_STATES state, char buf[] );
 void mss_menuMode();
-void mss_runMode();
+void mss_runInit();
+void mss_runService();
 void mss_manualMode();
+void mss_zeroMode();
 uint8_t mss_getButtons();
 
 #define MOD_ADC_I2C	0x32
@@ -57,33 +61,63 @@ uint8_t mss_getButtons();
 #define BUTTON_RED		0x02
 #define BUTTON_YELLOW	0x04
 
+#define MAX_FRAMES		8
+const char mss_calTable[][16];		// MUST be declared before use.
+
+
 typedef struct {
-	uint32_t ktimeStamp;			// minimum 20ms steps. Maximum update rate.
-	uint8_t	servo[16];
+	uint32_t timeStamp;			// minimum 20ms steps. Maximum update rate.
+	char servo[16];
 } SERVO_DATA;
-SERVO_DATA	servoPos[8];		// 64 @ 20 bytes per entry -> 1280 bytes.
+SERVO_DATA	servoPos[MAX_FRAMES];	// 64 @ 20 bytes per entry -> 1280 bytes.
 uint32_t seqStep;				// Duration between key frames.
 
+static uint8_t runIndex;
+static uint32_t runStartTime;
+static bool runLoop;
+static uint32_t moveTo;
+
+MSS_STATES menuState = MSS_MANUAL;
 MSS_STATES	mss_state;
 uint8_t	mssDelay;
 uint8_t	mss_count;
 
 int currentAdc[16];			// latest ADC reading (-128 : 127)
 
-char textBuf[18];
+static char textBuf[18];
 
 void mod_system_init()
 {
+	char data;
+	
+	menuState = MSS_MANUAL;
 	mss_state = MSS_IDLE;
 	mssDelay = MSS_DELAY;
 	mss_count = 0;
-	seqStep = 100;				// N * ms
+	seqStep = 2000;				// N * ms
+
+	// Zero RUN array
+	for(int i=0; i<MAX_FRAMES; i++) {
+		servoPos[i].timeStamp = 0;
+		for(int y=0; y<16; y++) {
+			servoPos[i].servo[y] = 0;
+		}
+	}
+	
+	// TEST - PRELOAD array
+	for(int i=0; i<4; i++) {
+		servoPos[i].timeStamp = (i * seqStep) + 1;
+		for(int y=0; y<16; y++) {
+			data = pgm_read_byte(&mss_calTable[i][y]);
+			servoPos[i].servo[y] = data;
+		}
+	}
 }
 
 void mod_systey_setKeyFrame(uint8_t servoNum, uint8_t pos)
 {
 	servoPos[0].servo[0] = servoNum;
-	servoPos[0].ktimeStamp = 500;
+	servoPos[0].timeStamp = 500;
 }
 
 /*
@@ -106,7 +140,6 @@ void mod_system_service()
 		switch( mss_state )
 		{
 			case MSS_IDLE:
-				// Check for BUTTON_GRN press. If pressed, go to MSS_RUN
 				if(mss_count == 1) {
 					// Send out banner.
 					mod_stdio_print("The Face Is Up! ", 16);
@@ -121,7 +154,7 @@ void mod_system_service()
 				
 			case MSS_MENU_INIT:
 				// Set up Menu banner
-				snprintf(textBuf, 17, " << %8s >> ", getNameString(MSS_MANUAL, nameStr));
+				snprintf(textBuf, 17, " << %8s >> ", getNameString(menuState, nameStr));
 				mod_stdio_print(textBuf, 16);
 				mss_state = MSS_MENU;
 				mssDelay = 50;			// N * 1ms
@@ -132,16 +165,28 @@ void mod_system_service()
 				break;
 
 			// MANUAL Mode has the servo track its associated control pot.
+			// Does NOT return yet. No Button check.
 			case MSS_MANUAL:
-				mss_state = MSS_IDLE;
+				mss_manualMode();
 				break;
 
 			case MSS_PRGM:
 				mss_state = MSS_IDLE;
 				break;
 
+			case MSS_RUN_MENU:
+				// Set up Menu banner
+				mod_stdio_print("ONCE  EXIT  LOOP", 16);
+				mss_state = MSS_RUN_INIT;
+				mssDelay = 50;			// N * 1ms
+				break;
+			
+			case MSS_RUN_INIT:
+				mss_runInit();
+				break;
+			
 			case MSS_RUN:
-				mss_state = MSS_IDLE;
+				mss_runService();
 				break;
 			
 			case MSS_ERASE:
@@ -154,6 +199,10 @@ void mod_system_service()
 			
 			case MSS_FTIME:
 				mss_state = MSS_IDLE;
+				break;
+				
+			case MSS_ZERO:
+				mss_zeroMode();
 				break;
 			
 			default:
@@ -175,7 +224,7 @@ char* getNameString( MSS_STATES state, char buf[] )
 			strncpy(buf, "PROGRAM ", 9);
 			break;
 		
-		case MSS_RUN:
+		case MSS_RUN_MENU:
 			strncpy(buf, "  RUN   ", 9);
 			break;
 		
@@ -189,6 +238,10 @@ char* getNameString( MSS_STATES state, char buf[] )
 		
 		case MSS_FTIME:
 			strncpy(buf, " F-TIME ", 9);
+			break;
+		
+		case MSS_ZERO:
+			strncpy(buf, "  ZERO  ", 9);
 			break;
 		
 		default:
@@ -207,7 +260,6 @@ char* getNameString( MSS_STATES state, char buf[] )
 void mss_menuMode()
 {
 	uint8_t	data;
-	static MSS_STATES menuState = MSS_MANUAL;
 	char nameStr[10];
 	
 	data = mss_getButtons();
@@ -216,7 +268,7 @@ void mss_menuMode()
 	switch( menuState )
 	{
 		case MSS_MANUAL:
-			if((data & BUTTON_GREEN) == BUTTON_GREEN) menuState = MSS_FTIME;
+			if((data & BUTTON_GREEN) == BUTTON_GREEN) menuState = MSS_ZERO;
 			if((data & BUTTON_RED) == BUTTON_RED) mss_state = MSS_MANUAL;
 			if((data & BUTTON_YELLOW) == BUTTON_YELLOW) menuState = MSS_PRGM;
 			break;
@@ -224,17 +276,17 @@ void mss_menuMode()
 		case MSS_PRGM:
 			if((data & BUTTON_GREEN) == BUTTON_GREEN) menuState = MSS_MANUAL;
 			if((data & BUTTON_RED) == BUTTON_RED) mss_state = MSS_PRGM;
-			if((data & BUTTON_YELLOW) == BUTTON_YELLOW) menuState = MSS_RUN;
+			if((data & BUTTON_YELLOW) == BUTTON_YELLOW) menuState = MSS_RUN_MENU;
 			break;
 			
-		case MSS_RUN:
+		case MSS_RUN_MENU:
 			if((data & BUTTON_GREEN) == BUTTON_GREEN) menuState = MSS_PRGM;
-			if((data & BUTTON_RED) == BUTTON_RED) mss_state = MSS_RUN;
+			if((data & BUTTON_RED) == BUTTON_RED) mss_state = MSS_RUN_MENU;
 			if((data & BUTTON_YELLOW) == BUTTON_YELLOW) menuState = MSS_ERASE;
 			break;
 		
 		case MSS_ERASE:
-			if((data & BUTTON_GREEN) == BUTTON_GREEN) menuState = MSS_RUN;
+			if((data & BUTTON_GREEN) == BUTTON_GREEN) menuState = MSS_RUN_MENU;
 			if((data & BUTTON_RED) == BUTTON_RED) mss_state = MSS_ERASE;
 			if((data & BUTTON_YELLOW) == BUTTON_YELLOW) menuState = MSS_STEP;
 			break;
@@ -248,9 +300,15 @@ void mss_menuMode()
 		case MSS_FTIME:
 			if((data & BUTTON_GREEN) == BUTTON_GREEN) menuState = MSS_STEP;
 			if((data & BUTTON_RED) == BUTTON_RED) mss_state = MSS_FTIME;
-			if((data & BUTTON_YELLOW) == BUTTON_YELLOW) menuState = MSS_MANUAL;
+			if((data & BUTTON_YELLOW) == BUTTON_YELLOW) menuState = MSS_ZERO;
 			break;
 			
+		case MSS_ZERO:
+			if((data & BUTTON_GREEN) == BUTTON_GREEN) menuState = MSS_FTIME;
+			if((data & BUTTON_RED) == BUTTON_RED) mss_state = MSS_ZERO;
+			if((data & BUTTON_YELLOW) == BUTTON_YELLOW) menuState = MSS_MANUAL;
+			break;
+		
 		default:
 			menuState = MSS_MANUAL;
 			break;
@@ -264,23 +322,76 @@ void mss_menuMode()
 }
 
 /*
- * Run Mode
+ * Run Init Mode
  */
-void mss_runMode()
+void mss_runInit()
 {
-	static uint8_t slow_cnt = 0;
+	uint8_t data;
+	
+	data = mss_getButtons();
+	if(data > 7) return;			// 0x88 error
+	
+	if(data != 0) {
+		if((data & BUTTON_GREEN) == BUTTON_GREEN) {
+			runLoop = false;
+			mss_state = MSS_RUN;
+		} else 	if((data & BUTTON_YELLOW) == BUTTON_YELLOW) {
+			runLoop = true;
+			mss_state = MSS_RUN;
+		} else if((data & BUTTON_RED) == BUTTON_RED) {
+			mss_state = MSS_MENU_INIT;
+		}
+		runIndex = 0;
+		runStartTime = st_millis();
+		moveTo = 0;
+	}
+}
 
-			++slow_cnt;
-			if( slow_cnt == 1) {
-				mp_setPos(2, 0x0133+60);
-				mod_led_on();
+/*
+ * Run Mode
+ * NOTE: When building the servoPos array, the timeStamp starts at 0 and F-Time is added to each step.
+ * CAUTION: Large movement can occur if LAST frame and FIRST frame are not the same.
+ */
+void mss_runService()
+{
+	uint8_t data;
+	uint32_t frameTime;
 
+	frameTime = st_millis() - runStartTime;
+
+	if(frameTime >= moveTo) {
+		// Check for last Frame AFTER allowing move to new position.
+		if((runIndex == MAX_FRAMES) || (servoPos[runIndex].timeStamp == 0)) {
+			if(runLoop == true) {
+				// Reset parameters and rerun.
+				runIndex = 0;
+				runStartTime = st_millis();
+				moveTo = 0;
+			} else {
+				mss_state = MSS_RUN_MENU;
 			}
-			if( slow_cnt == 2) {
-				mp_setPos(2, 0x0133-60);
-				mod_led_off();
-				slow_cnt = 0;
+			return;						// EXIT even though should never execute next block.
+										// timeStamp is still half a seqStep away.
+		}
+
+		if(frameTime >= servoPos[runIndex].timeStamp ) {		// are we there yet?
+			moveTo = frameTime + seqStep;					// allow time to move to new position.
+			// Update servos
+			for(int i=0; i<16; i++) {
+				mp_setPos(i, MP_CENTER - (int)servoPos[runIndex].servo[i]);
 			}
+			snprintf(textBuf, 17, "FRAME: %2d      ", runIndex);
+			mod_stdio_print(textBuf, 16);
+
+			++runIndex;
+		}
+	}
+	
+	// Check for EXIT request
+	data = mss_getButtons();
+	if( data != 0 ) {
+		mss_state = MSS_RUN_MENU;	// Press ANY button to STOP.
+	}
 }
 
 /*
@@ -291,23 +402,25 @@ void mss_manualMode()
 	int adc_data;
 	char buf[8];
 	uint8_t nbytes;
+	uint8_t data;
 
 	for( uint8_t i=0; i<8; i++)
 	{
 		// Get ADC channels last reading.
 		adc_data = (int)adc_support_readChan(i);			// 0 -> 255
-		adc_data -= 128;									// center
+		adc_data -= 128;									// center .. +127 <-> -128
 		
 		currentAdc[i] = adc_data;
 
 		mp_setPos(i, MP_CENTER - currentAdc[i]);			// using i+8 controls second set of 8 servos.
 
 		if(i == 0) {
-			nbytes = snprintf(buf, 7, " %+04d ", adc_data);
-			mod_stdio_printOffset(buf, nbytes-1, 3);
+			nbytes = snprintf(textBuf, 17, "SERVO[1]: %+04d  ", adc_data);
+			mod_stdio_print(textBuf, nbytes);
 		}
 	}
 
+#if 0
 	// Read ADC Slave Ch 8-15
 	buf[0] = 0x08;
 	// Send packet.
@@ -318,7 +431,9 @@ void mss_manualMode()
 	for(int i=8; i<16; i++)
 	{
 		// Wait for data.
-		while(!tim_hasData());
+		while(!tim_hasData()) {
+			if( !tim_isBusy() ) return;		// error on bus while no data received. EXIT.
+		}
 		// get data.
 		adc_data = (int)tim_readData();
 		adc_data -= 128;									// center
@@ -327,6 +442,23 @@ void mss_manualMode()
 
 		mp_setPos(i, MP_CENTER - currentAdc[i]);
 	}
+#endif
+
+#if 1
+	// Check for EXIT request
+	data = mss_getButtons();
+	if((data & BUTTON_RED) == BUTTON_RED) {
+		mss_state = MSS_MENU_INIT;	// Press ANY button to STOP.
+	}
+#endif
+}
+
+void mss_zeroMode()
+{
+	for(int i=0; i<16; i++) {
+		mp_setPos(i, MP_CENTER);
+	}
+	mss_state = MSS_MENU_INIT;	// Press ANY button to STOP.
 }
 
 MSS_STATES mod_system_getState()
@@ -358,6 +490,8 @@ uint8_t mss_getButtons()
 
 	// get data.
 	data = tim_readData();
+	// ERROR CATCH
+	if(data == 0x88) data = 0;
 	tmp = data;
 	
 	// DEBUG - Echo Buttons to LED
@@ -373,3 +507,14 @@ uint8_t mss_getButtons()
 	
 	return(data);
 }
+
+/*
+ * Servo position check table.
+ * Timestamp is set by the calling process.
+ */
+const char mss_calTable[][16] PROGMEM = {
+	{  30,   0,  30,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0},
+	{  60,   0,  60,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0},
+	{  90,   0,  90,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0},
+	{   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0}
+};
