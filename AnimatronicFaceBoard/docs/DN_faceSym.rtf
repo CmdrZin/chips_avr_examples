@@ -82,6 +82,12 @@ FRAME TIME: Set delay between Key Frames. 30ms to 1000ms. RED:Exit\par
 ZERO: Set all servos to CENTER position.\par
 \tab Has no menu.\par
 \par
+PROGRAM Process\par
+static uint8_t x\par
+if Button & GREEN == GREEN and x < MAX_FRAMES\par
+  Record adc_data[0:15] into servoPos[x].servo[0:15] when GREEN pressed and inc x and display.\par
+if Button & RED == RED then EXIT to MENU_INIT.\par
+\par
 RUN Process\par
 MAX_FRAMES  8\tab // size of arrary or as a variable set during PROGRAM process\par
 servoPos[] has an entry for each Frame: servoPos[0:N].timeStamp and servoPos[0:N].servo[0:15]\par
@@ -198,6 +204,15 @@ PWM is 8-bit @ 12.8us [78.125kHz] (20MHz/256)\par
 \par
 LCD API (mod_stdio.h)\par
 (see DN_LCD_16100_CP.rtf)\par
+\par
+Data Handling Redux\par
+Store raw ADC data as uint8_t.\par
+\tab data = 0 : 255\par
+When moved to currentADC[], save as uint8_t.\par
+\tab char currentADC[x] = rawADC;\par
+To send to servo, convert to uint16_t.\par
+\tab CENTER = 0x0133\par
+\tab uint16_t servo = (uint16_t)((int)CENTER + (int)currentADC[x]) - 128\par
 \par
 \par
 \par

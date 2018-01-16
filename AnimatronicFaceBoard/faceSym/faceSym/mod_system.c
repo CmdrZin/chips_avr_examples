@@ -44,6 +44,8 @@
 
 char* getNameString( MSS_STATES state, char buf[] );
 void mss_menuMode();
+void mss_prgmInit();
+void mss_prgmService();
 void mss_runInit();
 void mss_runService();
 void mss_manualMode();
@@ -62,18 +64,18 @@ uint8_t mss_getButtons();
 #define BUTTON_YELLOW	0x04
 
 #define MAX_FRAMES		8
-const char mss_calTable[][16];		// MUST be declared before use.
+const uint8_t mss_calTable[][16];		// MUST be declared before use.
 
 
 typedef struct {
 	uint32_t timeStamp;			// minimum 20ms steps. Maximum update rate.
-	char servo[16];
+	uint8_t servo[16];
 } SERVO_DATA;
 SERVO_DATA	servoPos[MAX_FRAMES];	// 64 @ 20 bytes per entry -> 1280 bytes.
 uint32_t seqStep;				// Duration between key frames.
 
-static uint8_t runIndex;
-static uint32_t runStartTime;
+static uint8_t runIndex;		// also used in Program as frame index.
+static uint32_t runStartTime;	// also used in Program as start time.
 static bool runLoop;
 static uint32_t moveTo;
 
@@ -82,7 +84,7 @@ MSS_STATES	mss_state;
 uint8_t	mssDelay;
 uint8_t	mss_count;
 
-int currentAdc[16];			// latest ADC reading (-128 : 127)
+uint8_t currentAdc[16];			// latest ADC reading (-128 : 127)
 
 static char textBuf[18];
 
@@ -96,6 +98,11 @@ void mod_system_init()
 	mss_count = 0;
 	seqStep = 2000;				// N * ms
 
+	// Zero ADC array
+	for(int i=0; i<16; i++) {
+		currentAdc[i] = 0;
+	}
+
 	// Zero RUN array
 	for(int i=0; i<MAX_FRAMES; i++) {
 		servoPos[i].timeStamp = 0;
@@ -105,7 +112,7 @@ void mod_system_init()
 	}
 	
 	// TEST - PRELOAD array
-	for(int i=0; i<4; i++) {
+	for(int i=0; i<6; i++) {
 		servoPos[i].timeStamp = (i * seqStep) + 1;
 		for(int y=0; y<16; y++) {
 			data = pgm_read_byte(&mss_calTable[i][y]);
@@ -165,13 +172,24 @@ void mod_system_service()
 				break;
 
 			// MANUAL Mode has the servo track its associated control pot.
-			// Does NOT return yet. No Button check.
 			case MSS_MANUAL:
+				mssDelay = MSS_MANUAL_DELAY;		// N * 1ms
 				mss_manualMode();
 				break;
 
+			case MSS_PRGM_MENU:
+			// Set up Menu banner
+				mod_stdio_print("REC   EXIT  #:00", 16);
+				mss_state = MSS_PRGM_INIT;
+				mssDelay = 100;			// N * 1ms
+				break;
+			
+			case MSS_PRGM_INIT:
+				mss_prgmInit();
+				break;
+			
 			case MSS_PRGM:
-				mss_state = MSS_IDLE;
+				mss_prgmService();
 				break;
 
 			case MSS_RUN_MENU:
@@ -275,7 +293,7 @@ void mss_menuMode()
 			
 		case MSS_PRGM:
 			if((data & BUTTON_GREEN) == BUTTON_GREEN) menuState = MSS_MANUAL;
-			if((data & BUTTON_RED) == BUTTON_RED) mss_state = MSS_PRGM;
+			if((data & BUTTON_RED) == BUTTON_RED) mss_state = MSS_PRGM_MENU;
 			if((data & BUTTON_YELLOW) == BUTTON_YELLOW) menuState = MSS_RUN_MENU;
 			break;
 			
@@ -318,6 +336,91 @@ void mss_menuMode()
 	if(data != 0) {
 		snprintf(textBuf, 17, " << %8s >> ", getNameString(menuState, nameStr));
 		mod_stdio_print(textBuf, 16);
+	}
+}
+
+/*
+ * Program Init Mode
+ */
+void mss_prgmInit()
+{
+	runIndex = 0;
+	runStartTime = 1;				// non-zero time. Zero is end of sequence.
+	mss_state = MSS_PRGM;
+}
+
+/*
+ * Program Mode
+ * NOTE: When building the servoPos array, the timeStamp starts at 0 and F-Time is added to each step.
+ * CAUTION: Large movement can occur if LAST frame and FIRST frame are not the same.
+ */
+void mss_prgmService()
+{
+	uint8_t data;
+	uint8_t nbytes;
+	uint32_t dTime;
+	
+	for( uint8_t i=0; i<8; i++)
+	{
+		// Get ADC channels last reading.
+		currentAdc[i] = adc_support_readChan(i);			// 0 -> 255
+		mp_setPos(i, (MP_CENTER + currentAdc[i]) - 128);		// using i+8 controls second set of 8 servos.
+	}
+
+#if 1
+	for(int i=8; i<16; i++)
+	{
+		// Wait for data.
+		while(!tim_hasData()) {
+			if( !tim_isBusy() ) return;		// error on bus while no data received. EXIT.
+		}
+		// get data.
+		currentAdc[i] = 128;			// ADC Center
+		mp_setPos(i, (MP_CENTER + currentAdc[i]) - 128);		// using i+8 controls second set of 8 servos.
+	}
+#else
+	// Read ADC Slave Ch 8-15
+	textBuf[0] = 0x08;
+	// Send packet.
+	tim_write(MOD_ADC_I2C, (uint8_t*)textBuf, 1);
+	// TRY adding 1ms delay here.
+	// NOTE: Could use a time-out here of 5ms
+	tim_read( MOD_ADC_I2C, 8 );
+	for(int i=8; i<16; i++)
+	{
+		// Wait for data.
+		while(!tim_hasData()) {
+			if( !tim_isBusy() ) return;		// error on bus while no data received. EXIT.
+		}
+		// get data.
+		currentAdc[i] = tim_readData();
+	}
+#endif
+	// TEST DELAY
+	dTime = st_millis();
+	while( dTime != st_millis());
+	
+	data = mss_getButtons();
+	if(data > 7) return;			// 0x88 error
+
+	if(data != 0) {
+		if( ((data & BUTTON_GREEN) == BUTTON_GREEN) && (runIndex < MAX_FRAMES) ) {
+			// Copy adc_data into servo[]
+			for(int i=0; i<16; i++)
+			{
+				servoPos[runIndex].servo[i] = currentAdc[i];
+			}
+			++runIndex;
+
+			// Update display
+			nbytes = snprintf(textBuf, 17, "REC   EXIT #:%02d  ", runIndex);
+			mod_stdio_print(textBuf, nbytes-1);
+
+			// Update parameters
+			runStartTime = runStartTime + seqStep;
+		} else if((data & BUTTON_RED) == BUTTON_RED) {
+			mss_state = MSS_MENU_INIT;
+		}
 	}
 }
 
@@ -378,7 +481,11 @@ void mss_runService()
 			moveTo = frameTime + seqStep;					// allow time to move to new position.
 			// Update servos
 			for(int i=0; i<16; i++) {
-				mp_setPos(i, MP_CENTER - (int)servoPos[runIndex].servo[i]);
+				mp_setPos(i, (MP_CENTER + servoPos[runIndex].servo[i]) - 128);
+				
+				// TEST DELAY
+//				frameTime = st_millis();
+//				while( frameTime != st_millis());
 			}
 			snprintf(textBuf, 17, "FRAME: %2d      ", runIndex);
 			mod_stdio_print(textBuf, 16);
@@ -399,32 +506,27 @@ void mss_runService()
  */
 void mss_manualMode()
 {
-	int adc_data;
-	char buf[8];
 	uint8_t nbytes;
 	uint8_t data;
 
 	for( uint8_t i=0; i<8; i++)
 	{
 		// Get ADC channels last reading.
-		adc_data = (int)adc_support_readChan(i);			// 0 -> 255
-		adc_data -= 128;									// center .. +127 <-> -128
-		
-		currentAdc[i] = adc_data;
+		currentAdc[i] = adc_support_readChan(i);			// 0 -> 255
 
-		mp_setPos(i, MP_CENTER - currentAdc[i]);			// using i+8 controls second set of 8 servos.
+		mp_setPos(i, (MP_CENTER + currentAdc[i]) - 128);		// using i+8 controls second set of 8 servos.
 
 		if(i == 0) {
-			nbytes = snprintf(textBuf, 17, "SERVO[1]: %+04d  ", adc_data);
+			nbytes = snprintf(textBuf, 17, "SERVO[1]: %+03d   ", (int)currentAdc[i] - 128);
 			mod_stdio_print(textBuf, nbytes);
 		}
 	}
 
 #if 0
 	// Read ADC Slave Ch 8-15
-	buf[0] = 0x08;
+	textBuf[0] = 0x08;
 	// Send packet.
-	tim_write(MOD_ADC_I2C, (uint8_t*)buf, 1);
+	tim_write(MOD_ADC_I2C, (uint8_t*)textBuf, 1);
 	
 	// NOTE: Could use a time-out here of 5ms
 	tim_read( MOD_ADC_I2C, 8 );
@@ -435,12 +537,9 @@ void mss_manualMode()
 			if( !tim_isBusy() ) return;		// error on bus while no data received. EXIT.
 		}
 		// get data.
-		adc_data = (int)tim_readData();
-		adc_data -= 128;									// center
+		currentAdc[i] = tim_readData();
 
-		currentAdc[i] =  adc_data;
-
-		mp_setPos(i, MP_CENTER - currentAdc[i]);
+		mp_setPos(i, (MP_CENTER + currentAdc[i]) - 128);		// using i+8 controls second set of 8 servos.
 	}
 #endif
 
@@ -473,13 +572,12 @@ MSS_STATES mod_system_getState()
  */
 uint8_t mss_getButtons()
 {
-	char buf[6];
 	uint8_t data;
 	uint8_t tmp;
 
-	buf[0] = 0x01;
+	textBuf[0] = 0x01;
 	// Send packet.
-	tim_write( MOD_LCD_I2C, (uint8_t*)buf, 1 );
+	tim_write( MOD_LCD_I2C, (uint8_t*)textBuf, 1 );
 	
 	// NOTE: Could use a time-out here of 5ms
 	tim_read( MOD_LCD_I2C, 1 );
@@ -511,10 +609,15 @@ uint8_t mss_getButtons()
 /*
  * Servo position check table.
  * Timestamp is set by the calling process.
+ * Value are the same as ADC readings..0:255 with 128 as center.
  */
-const char mss_calTable[][16] PROGMEM = {
-	{  30,   0,  30,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0},
-	{  60,   0,  60,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0},
-	{  90,   0,  90,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0},
-	{   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0}
+const uint8_t mss_calTable[][16] PROGMEM = {
+	{ 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128},
+	{ 200,  50,  50,  50, 128, 128, 128, 128, 128, 128,  50,  50, 128, 128, 128, 128},
+	{  50,  50, 200,  50, 128, 128, 128, 128, 128, 128,  50, 200, 128, 128, 128, 128},
+	{  50, 200, 200, 200, 128, 128, 128, 128, 128, 128, 200, 200, 128, 128, 128, 128},
+	{ 200, 200,  50, 200, 128, 128, 128, 128, 128, 128,  50, 200, 128, 128, 128, 128},
+	{ 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128},
+	{ 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128},
+	{ 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128}
 };
