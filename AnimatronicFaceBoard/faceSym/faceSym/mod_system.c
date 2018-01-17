@@ -358,7 +358,6 @@ void mss_prgmService()
 {
 	uint8_t data;
 	uint8_t nbytes;
-	uint32_t dTime;
 	
 	for( uint8_t i=0; i<8; i++)
 	{
@@ -370,11 +369,7 @@ void mss_prgmService()
 #if 1
 	for(int i=8; i<16; i++)
 	{
-		// Wait for data.
-		while(!tim_hasData()) {
-			if( !tim_isBusy() ) return;		// error on bus while no data received. EXIT.
-		}
-		// get data.
+		// set data.
 		currentAdc[i] = 128;			// ADC Center
 		mp_setPos(i, (MP_CENTER + currentAdc[i]) - 128);		// using i+8 controls second set of 8 servos.
 	}
@@ -396,10 +391,6 @@ void mss_prgmService()
 		currentAdc[i] = tim_readData();
 	}
 #endif
-	// TEST DELAY
-	dTime = st_millis();
-	while( dTime != st_millis());
-	
 	data = mss_getButtons();
 	if(data > 7) return;			// 0x88 error
 
