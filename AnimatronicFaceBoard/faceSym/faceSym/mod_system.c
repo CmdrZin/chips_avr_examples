@@ -42,6 +42,11 @@
 #include "mod_stdio.h"
 #include "mod_pca9685.h"
 
+// DEBUG++
+#include "mod_exp_io.h"
+// DEBUG--
+
+
 char* getNameString( MSS_STATES state, char buf[] );
 void mss_menuMode();
 void mss_prgmInit();
@@ -52,12 +57,11 @@ void mss_manualMode();
 void mss_zeroMode();
 uint8_t mss_getButtons();
 
-#define MOD_ADC_I2C	0x32
 #define MOD_LCD_I2C 0x5E
 
 #define MSS_DELAY			10		// N * 1ms
 #define MSS_RUN_DELAY		100		// N * 1ms
-#define MSS_MANUAL_DELAY	25		// N * 1ms
+#define MSS_MANUAL_DELAY	50		// N * 1ms
 
 #define BUTTON_GREEN	0x01
 #define BUTTON_RED		0x02
@@ -86,7 +90,7 @@ uint8_t	mss_count;
 
 uint8_t currentAdc[16];			// latest ADC reading (-128 : 127)
 
-static char textBuf[18];
+char textBuf[20];
 
 void mod_system_init()
 {
@@ -366,31 +370,17 @@ void mss_prgmService()
 		mp_setPos(i, (MP_CENTER + currentAdc[i]) - 128);		// using i+8 controls second set of 8 servos.
 	}
 
-#if 1
 	for(int i=8; i<16; i++)
 	{
+#if 0
 		// set data.
 		currentAdc[i] = 128;			// ADC Center
+#else
+		// get data.
+		currentAdc[i] = adc_support_readChan(i);
+#endif
 		mp_setPos(i, (MP_CENTER + currentAdc[i]) - 128);		// using i+8 controls second set of 8 servos.
 	}
-#else
-	// Read ADC Slave Ch 8-15
-	textBuf[0] = 0x08;
-	// Send packet.
-	tim_write(MOD_ADC_I2C, (uint8_t*)textBuf, 1);
-	// TRY adding 1ms delay here.
-	// NOTE: Could use a time-out here of 5ms
-	tim_read( MOD_ADC_I2C, 8 );
-	for(int i=8; i<16; i++)
-	{
-		// Wait for data.
-		while(!tim_hasData()) {
-			if( !tim_isBusy() ) return;		// error on bus while no data received. EXIT.
-		}
-		// get data.
-		currentAdc[i] = tim_readData();
-	}
-#endif
 	data = mss_getButtons();
 	if(data > 7) return;			// 0x88 error
 
@@ -504,7 +494,6 @@ void mss_manualMode()
 	{
 		// Get ADC channels last reading.
 		currentAdc[i] = adc_support_readChan(i);			// 0 -> 255
-
 		mp_setPos(i, (MP_CENTER + currentAdc[i]) - 128);		// using i+8 controls second set of 8 servos.
 
 		if(i == 0) {
@@ -513,34 +502,18 @@ void mss_manualMode()
 		}
 	}
 
-#if 0
-	// Read ADC Slave Ch 8-15
-	textBuf[0] = 0x08;
-	// Send packet.
-	tim_write(MOD_ADC_I2C, (uint8_t*)textBuf, 1);
-	
-	// NOTE: Could use a time-out here of 5ms
-	tim_read( MOD_ADC_I2C, 8 );
+	// Update Servos
 	for(int i=8; i<16; i++)
 	{
-		// Wait for data.
-		while(!tim_hasData()) {
-			if( !tim_isBusy() ) return;		// error on bus while no data received. EXIT.
-		}
-		// get data.
-		currentAdc[i] = tim_readData();
-
+		currentAdc[i] = adc_support_readChan(i);			// 0 -> 255
 		mp_setPos(i, (MP_CENTER + currentAdc[i]) - 128);		// using i+8 controls second set of 8 servos.
 	}
-#endif
 
-#if 1
 	// Check for EXIT request
 	data = mss_getButtons();
 	if((data & BUTTON_RED) == BUTTON_RED) {
 		mss_state = MSS_MENU_INIT;	// Press ANY button to STOP.
 	}
-#endif
 }
 
 void mss_zeroMode()
@@ -565,35 +538,38 @@ uint8_t mss_getButtons()
 {
 	uint8_t data;
 	uint8_t tmp;
+	uint32_t dTime;
 
 	textBuf[0] = 0x01;
 	// Send packet.
 	tim_write( MOD_LCD_I2C, (uint8_t*)textBuf, 1 );
+
+	dTime = st_millis() + 1;
+	while(dTime > st_millis());		// wait 1 ms
 	
 	// NOTE: Could use a time-out here of 5ms
 	tim_read( MOD_LCD_I2C, 1 );
-	// Wait for data.
-	while(!tim_hasData()) {
-		 if( !tim_isBusy() ) return(0);		// error on bus while no data received. EXIT.
-	}
+	// Wait for read to finish
+	while( tim_isBusy());
 
 	// get data.
 	data = tim_readData();
-	// ERROR CATCH
-	if(data == 0x88) data = 0;
 	tmp = data;
+	// ERROR CATCH
+	if(data > 7) data = 0;
 	
 	// DEBUG - Echo Buttons to LED
 	for(int i=0; i<8; i++)
 	{
-		if(tmp & 0x80) {
+		if((tmp & 0x80) == 0x80) {
 			mod_led_on();
 		} else {
 			mod_led_off();
 		}
 		tmp = tmp << 1;
 	}
-	
+	mod_led_off();
+
 	return(data);
 }
 

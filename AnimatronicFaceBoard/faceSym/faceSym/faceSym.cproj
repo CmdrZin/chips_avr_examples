@@ -161,6 +161,12 @@
     <Compile Include="mod_audio.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="mod_exp_io.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="mod_exp_io.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="mod_led.c">
       <SubType>compile</SubType>
     </Compile>

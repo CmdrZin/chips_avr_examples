@@ -32,12 +32,16 @@
 
 #include "adc_support.h"
 #include "sysTimer.h"
+#include "twi_I2CMaster.h"
 
+#define MOD_ADC_I2C	0x32
 
 uint8_t as_startWaitRead( uint8_t chan );
 
-uint8_t as_data[8];		// last data read
+uint8_t as_data[16];		// last data read
 uint8_t as_channel;
+
+uint8_t agBuf[4];
 
 /*
  * Vref: VCC
@@ -55,16 +59,16 @@ void adc_support_init()
 }
 
 /*
- * Read one channel every 1ms. 8ms to read all eight channels.
- * Process - Called continuously (self timed 1ms steps)
- * 0. Read as_channel
- * 1. inc as_channel and reset to 0 if == 8
- */
+* Read one channel every 1ms. 8ms to read all eight channels.
+* Process - Called continuously (self timed 1ms steps)
+* 0. Read as_channel
+* 1. inc as_channel and reset to 0 if == 8
+*/
 void adc_support_service()
 {
 	static uint32_t lastTime = 0;
 	uint32_t currentTime;
-	
+
 	currentTime = st_millis();
 	
 	if( currentTime > lastTime )
@@ -75,6 +79,26 @@ void adc_support_service()
 
 		if(++as_channel >= 8) {
 			as_channel = 0;
+			
+			// Read ADC Slave Ch 8-15
+			agBuf[0] = 0x08;
+			// Send packet.
+			tim_write(MOD_ADC_I2C, agBuf, 1);
+			
+			currentTime = st_millis() + 1;
+			while(currentTime > st_millis());		// wait 1 ms
+
+			// NOTE: Could use a time-out here of 5ms
+			tim_read( MOD_ADC_I2C, 8 );
+
+			// Wait for read to finish
+			while( tim_isBusy());
+
+			for(int i=8; i<16; i++)
+			{
+				// get data.
+				as_data[i] = tim_readData();
+			}
 		}
 	}
 }

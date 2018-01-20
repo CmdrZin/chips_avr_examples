@@ -8,6 +8,8 @@ main.c
 
 mod_audio.c
 
+mod_exp_io.c
+
 mod_led.c
 
 mod_pca9685.c

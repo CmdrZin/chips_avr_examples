@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  * 
- * Copyright (c) 2016 Nels D. "Chip" Pearson (aka CmdrZin)
+ * Copyright (c) 2018 Nels D. "Chip" Pearson (aka CmdrZin)
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,60 +21,29 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * mod_led.c
+ * mod_exp_io.c
  *
- * Created: 5/18/2015		v0.01	ndp
+ * Created: 1/19/2018 11:09:47 AM
  *  Author: Chip
- * revision:	9/12/2016	v0.02	ndp	mod for FaceBoard
  */ 
 
 #include <avr/io.h>
 
-#include "mod_led.h"
+#include "mod_exp_io.h"
 
-void mod_led_init()
+void mod_expio_init()
 {
-	DEV_LED_DDR |= (1<<DEV_LED_OUT_PIN);			// set HIGH for output
-
+	DEV_EXPIO_DDR |= (1<<DEV_EXPIO_PIN3)|(1<<DEV_EXPIO_PIN2)|(1<<DEV_EXPIO_PIN1)|(1<<DEV_EXPIO_PIN0);			// set HIGH for output
+	mod_expio_set(0);
 	return;
 }
 
 /*
- * Turn LED OFF
+ * Set Exp IO Port
  */
-void mod_led_off()
+void mod_expio_set( uint8_t val )
 {
-	// Reverse logic for demo board use.
-	DEV_LED_PORT |= (1<<DEV_LED_OUT_PIN);			// set HIGH
+	DEV_EXPIO_PORT = val;
 
 	return;
-}
-
-/*
- * Turn LED ON
- */
-void mod_led_on()
-{
-	// Reverse logic for demo board use.
-	DEV_LED_PORT &= ~(1<<DEV_LED_OUT_PIN);			// set LOW
-
-	return;
-}
-
-/*
- * Toggle LED ON n times.
- */
-void mod_led_toggle(uint8_t val)
-{
-	for(uint8_t i=0; i<val; ++i)
-	{
-		mod_led_on();
-		asm("nop");
-		asm("nop");
-		asm("nop");
-		mod_led_off();
-		asm("nop");
-		asm("nop");
-		asm("nop");
-	}
 }

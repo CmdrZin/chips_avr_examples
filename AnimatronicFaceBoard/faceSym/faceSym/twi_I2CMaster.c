@@ -33,6 +33,9 @@
 
 #include "twi_I2CMaster.h"
 
+// DEBUG
+#include "mod_led.h"
+#include "mod_exp_io.h"
 
 // General TWI Master status codes
 #define TWI_START                  0x08  // START has been transmitted
@@ -71,10 +74,6 @@ void tim_init()
 	TWBR = 90;				// 90=20MHz->100k, 32=8MHz->100kHz, 2 8MHz->400kHz
 //	TWBR = 2;				// 32=8MHz->100kHz, 2 8MHz->400kHz
 	timBusy = false;
-// DEBUG++
-//	DDRD |= (1<<PORTD0);	// set as OUTPUT
-//	PORTD &= ~(1<<PORTD0);	// set LOW
-// DEBUG--
 }
 
 void tim_write( uint8_t sla, uint8_t* buffer, uint8_t nbytes )
@@ -94,9 +93,6 @@ void tim_write( uint8_t sla, uint8_t* buffer, uint8_t nbytes )
 	TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWSTA);		// Initiate a START condition.
 	
 	timBusy = true;
-// DEBUG++
-//	PORTD |= (1<<PORTD0);	// set HIGH
-// DEBUG--
 }
 
 bool tim_isBusy()
@@ -118,9 +114,6 @@ void tim_read( uint8_t sla, uint8_t nbytes )
 	TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWSTA);		// Initiate a START condition.
 
 	timBusy = true;
-// DEBUG++
-//	PORTD |= (1<<PORTD0);	// set HIGH
-// DEBUG--
 }
 
 bool tim_hasData()
@@ -162,58 +155,45 @@ ISR( TWI_vect )
 				TWCR = (1<<TWEN)|(1<<TWINT)|(1<<TWSTO);	// Disable TWI Interrupt and clear the flag
 														// Initiate a STOP condition.
 				timBusy = false;
-// DEBUG++
-//				PORTD &= ~(1<<PORTD0);	// set LOW
-// DEBUG--
 			}
 			break;
 
 		case TWI_MRX_ADR_ACK:				// SLA+R has been transmitted and ACK received
+			timRxBufferBytes = timRxBufferBytes - 1;		// adjust total.
 			timRxBufferPtr = 0;				// Set buffer pointer start
-			if (timRxBufferPtr < timRxBufferBytes-1 )		// Check for one byte read.
+			if (timRxBufferPtr < timRxBufferBytes )		// Check for one byte read.
 			{
 				TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWEA);
 			}
 			else
 			{
-				TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT);		// NACK
-// DEBUG++
-//				PORTD &= ~(1<<PORTD0);	// set LOW
-// DEBUG--
+				TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT);		// NACK next byte as last.
 			}
 			break;
 			
 		case TWI_MRX_DATA_ACK:				// Data byte has been received and ACK transmitted
-		    timRxBuffer[timRxBufferPtr++] = TWDR;
-			if (timRxBufferPtr < timRxBufferBytes-1 )		// Detect the last byte to NACK it.
+		    timRxBuffer[timRxBufferPtr] = TWDR;
+			timRxBufferPtr = timRxBufferPtr + 1;
+			if (timRxBufferPtr < timRxBufferBytes )		// Detect the last byte to NACK it.
 			{
 				TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWEA);
 		    }
 			else
 			{
 				TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT);		// NACK
-				timBusy = false;
-// DEBUG++
-//				PORTD &= ~(1<<PORTD0);	// set LOW
-// DEBUG--
 			}
 			break;
 			
 		case TWI_MRX_DATA_NACK:						// Data byte has been received and NACK transmitted
-			timRxBuffer[timRxBufferPtr++] = TWDR;
+			timRxBuffer[timRxBufferPtr] = TWDR;
+			timRxBufferPtr = timRxBufferPtr + 1;
 			TWCR = (1<<TWEN)|(1<<TWINT)|(1<<TWSTO);	// Initiate a STOP condition.
 			timBusy = false;
-// DEBUG++
-//			PORTD &= ~(1<<PORTD0);	// set LOW
-// DEBUG--
 			break;
 			
 		case TWI_ARB_LOST:						// Arbitration lost
 			TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWSTA);	// Initiate a (RE)START condition.
 			timBusy = false;
-// DEBUG++
-//			PORTD &= ~(1<<PORTD0);	// set LOW
-// DEBUG--
 		    break;
 			
 		case TWI_MTX_ADR_NACK:		// SLA+W has been transmitted and NACK received
@@ -228,9 +208,6 @@ ISR( TWI_vect )
 		    // Reset TWI Interface
 			TWCR = (1<<TWEN);
 			timBusy = false;
-// DEBUG++
-//			PORTD &= ~(1<<PORTD0);	// set LOW
-// DEBUG--
 			break;
 	}
 }

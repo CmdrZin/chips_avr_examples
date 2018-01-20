@@ -40,6 +40,7 @@ C_SRCS +=  \
 ../adc_support.c \
 ../main.c \
 ../mod_audio.c \
+../mod_exp_io.c \
 ../mod_led.c \
 ../mod_pca9685.c \
 ../mod_serial.c \
@@ -59,6 +60,7 @@ OBJS +=  \
 adc_support.o \
 main.o \
 mod_audio.o \
+mod_exp_io.o \
 mod_led.o \
 mod_pca9685.o \
 mod_serial.o \
@@ -71,6 +73,7 @@ OBJS_AS_ARGS +=  \
 adc_support.o \
 main.o \
 mod_audio.o \
+mod_exp_io.o \
 mod_led.o \
 mod_pca9685.o \
 mod_serial.o \
@@ -83,6 +86,7 @@ C_DEPS +=  \
 adc_support.d \
 main.d \
 mod_audio.d \
+mod_exp_io.d \
 mod_led.d \
 mod_pca9685.d \
 mod_serial.d \
@@ -95,6 +99,7 @@ C_DEPS_AS_ARGS +=  \
 adc_support.d \
 main.d \
 mod_audio.d \
+mod_exp_io.d \
 mod_led.d \
 mod_pca9685.d \
 mod_serial.d \
@@ -117,6 +122,8 @@ LINKER_SCRIPT_DEP+=
 
 
 # AVR32/GNU C Compiler
+
+
 
 
 

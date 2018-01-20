@@ -42,12 +42,14 @@
 #include "mod_pca9685.h"
 
 #include "mod_audio.h"
+#include "mod_exp_io.h"
 
 int main(void)
 {
 #if 1
 	st_init_tmr0();
 	mod_led_init();
+	mod_expio_init();
 	tim_init();
 	adc_support_init();
 	mod_serial_init();

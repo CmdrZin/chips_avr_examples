@@ -44,5 +44,6 @@
 void mod_led_init();
 void mod_led_off();
 void mod_led_on();
+void mod_led_toggle(uint8_t val);
 
 #endif /* mod_led_H_ */
