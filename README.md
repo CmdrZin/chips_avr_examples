@@ -26,4 +26,5 @@ These are projects that use the chip_avr_asm_lib and 'C' modules.
 |WinkyReduxProject | Redo of Winky Lights with AVR ATtiny85 in C code.|
 |AT85_I2C_Bootloader | I2C Bootloader for ATtiny85 based on AVR911 and AVR112.|
 |LED_Display_DevCode | I2C 4x2 7-seg LED Display Slave.|
-|LCD_16100_CP| Revised LCD I2C Slave code (inwork).|
+|LCD_16100_CP| Revised LCD I2C Slave code.|
+|StarNet | Update of Winky Lights 920 LEDs on 5 lines) using AVR ATtiny85 in C code.|
