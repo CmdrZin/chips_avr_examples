@@ -28,3 +28,4 @@ These are projects that use the chip_avr_asm_lib and 'C' modules.
 |LED_Display_DevCode | I2C 4x2 7-seg LED Display Slave.|
 |LCD_16100_CP| Revised LCD I2C Slave code.|
 |StarNet | Update of Winky Lights (20 LEDs on 5 lines) using AVR ATtiny85 in C code.|
+|GlowEyesType1| Simple glowing LEDs for ATtiny85.|  
