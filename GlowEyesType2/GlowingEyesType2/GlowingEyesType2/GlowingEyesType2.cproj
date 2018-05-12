@@ -149,6 +149,12 @@
     <Compile Include="sysTimer.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="ws2812b_util.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ws2812b_util.s">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="ws2812_util.h">
       <SubType>compile</SubType>
     </Compile>

@@ -39,15 +39,16 @@
 
 void test01(void);
 
-#define STEP_TIME	2		// N * ms
+#define STEP_TIME	5		// N * ms
 
-#define NUM_OF_PIXS	2
+#define NUM_OF_PIXS	3
 #define BYTE_CHAIN	(NUM_OF_PIXS * 3)
-char buf[8];
+char buf[12];
 
 int main(void)
 {
 	long nextTime = st_millis() + STEP_TIME;
+	uint8_t state = 1;		// pick pattern
 
 	int flag = 0;
 	buf[0] = 0x00;		// Green
@@ -56,6 +57,9 @@ int main(void)
 	buf[3] = 0x00;		// Green
 	buf[4] = 0x00;		// Red
 	buf[5] = 0x00;		// Blue
+	buf[6] = 0x00;		// Green
+	buf[7] = 0x00;		// Red
+	buf[8] = 0x00;		// Blue
 
 	st_init_tmr0();
 	mod_led_init();
@@ -68,41 +72,70 @@ int main(void)
 
 			ws2812_update((void*)buf, BYTE_CHAIN);
 
-			// Simple test
-			if(flag == 0) {
-				if(buf[0] != 255) {
-					++buf[0];
-					++buf[4];
-					} else {
-					if(buf[2] != 255) {
-						++buf[2];
-						++buf[3];
+			switch( state ) {
+				case 0:
+					// Simple test
+					if(flag == 0) {
+						if(buf[0] != 255) {
+							++buf[0];
+							++buf[4];
 						} else {
-						if(buf[1] != 255) {
-							++buf[1];
-							++buf[5];
+							if(buf[2] != 255) {
+								++buf[2];
+								++buf[3];
 							} else {
-							flag = 1;
+								if(buf[1] != 255) {
+									++buf[1];
+									++buf[5];
+								} else {
+									flag = 1;
+								}
+							}
+						}
+					} else {
+						if(buf[0] != 0) {
+							--buf[0];
+							--buf[4];
+						} else {
+							if(buf[2] != 0) {
+								--buf[2];
+								--buf[3];
+							} else {
+								if(buf[1] != 0) {
+									--buf[1];
+									--buf[5];
+								} else {
+									flag = 0;
+								}
+							}
 						}
 					}
-				}
-				} else {
-				if(buf[0] != 0) {
-					--buf[0];
-					--buf[4];
-					} else {
-					if(buf[2] != 0) {
-						--buf[2];
-						--buf[3];
+					break;
+
+				case 1:
+					// Simple test
+					if(flag == 0) {
+						if(buf[0] != 155) {
+							++buf[0];
+							++buf[4];
+							++buf[8];
 						} else {
-						if(buf[1] != 0) {
-							--buf[1];
-							--buf[5];
-							} else {
+							flag = 1;
+						}
+					} else {
+						if(buf[0] != 0) {
+							--buf[0];
+							--buf[4];
+							--buf[8];
+						} else {
 							flag = 0;
 						}
 					}
-				}
+					break;
+					
+				default:
+					state = 0;
+					break;
 			}
 		}
 	}

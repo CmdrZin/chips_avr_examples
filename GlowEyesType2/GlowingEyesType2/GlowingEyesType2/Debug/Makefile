@@ -43,6 +43,7 @@ C_SRCS +=  \
 
 
 PREPROCESSING_SRCS +=  \
+../ws2812b_util.s \
 ../ws2812_util.s
 
 
@@ -53,24 +54,28 @@ OBJS +=  \
 main.o \
 mod_led.o \
 sysTimer.o \
+ws2812b_util.o \
 ws2812_util.o
 
 OBJS_AS_ARGS +=  \
 main.o \
 mod_led.o \
 sysTimer.o \
+ws2812b_util.o \
 ws2812_util.o
 
 C_DEPS +=  \
 main.d \
 mod_led.d \
 sysTimer.d \
+ws2812b_util.d \
 ws2812_util.d
 
 C_DEPS_AS_ARGS +=  \
 main.d \
 mod_led.d \
 sysTimer.d \
+ws2812b_util.d \
 ws2812_util.d
 
 OUTPUT_FILE_PATH +=GlowingEyesType2.elf
@@ -108,6 +113,13 @@ LINKER_SCRIPT_DEP+=
 
 
 # AVR32/GNU Assembler
+./ws2812b_util.o: .././ws2812b_util.s
+	@echo Building file: $<
+	@echo Invoking: AVR/GNU Assembler : 5.4.0
+	$(QUOTE)D:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-gcc.exe$(QUOTE) -Wa,-gdwarf2 -x assembler-with-cpp -c -mmcu=attiny85 -B "D:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATtiny_DFP\1.2.118\gcc\dev\attiny85" -I "D:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATtiny_DFP\1.2.118\include"  -MD -MP -MF "$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -MT"$(@:%.o=%.o)" -Wa,-g   -o "$@" "$<" 
+	@echo Finished building: $<
+	
+
 ./ws2812_util.o: .././ws2812_util.s
 	@echo Building file: $<
 	@echo Invoking: AVR/GNU Assembler : 5.4.0
