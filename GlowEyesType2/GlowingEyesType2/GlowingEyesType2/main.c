@@ -34,7 +34,7 @@
 #include <avr/interrupt.h>
 
 #include "sysTimer.h"
-#include "ws2812_util.h"
+#include "ws2812_8_util.h"
 #include "mod_led.h"
 
 void test01(void);
@@ -70,7 +70,7 @@ int main(void)
 		if(nextTime < st_millis()) {
 			nextTime = nextTime + STEP_TIME;
 
-			ws2812_update((void*)buf, BYTE_CHAIN);
+			ws2812_8_update((void*)buf, BYTE_CHAIN);
 
 			switch( state ) {
 				case 0:
@@ -115,7 +115,7 @@ int main(void)
 				case 1:
 					// Simple test
 					if(flag == 0) {
-						if(buf[0] != 155) {
+						if(buf[0] != 255) {
 							++buf[0];
 							++buf[4];
 							++buf[8];
