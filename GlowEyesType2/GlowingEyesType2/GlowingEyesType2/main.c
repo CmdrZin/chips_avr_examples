@@ -41,14 +41,20 @@ void test01(void);
 
 #define STEP_TIME	5		// N * ms
 
-#define NUM_OF_PIXS	3
+#define NUM_OF_PIXS	7
 #define BYTE_CHAIN	(NUM_OF_PIXS * 3)
+
+#define I_GREEN		0
+#define I_RED		1
+#define I_BLUE		2
+
 char buf[12];
+char rgbBuf[8][3];		// {Green, Red, Blue}
 
 int main(void)
 {
 	long nextTime = st_millis() + STEP_TIME;
-	uint8_t state = 1;		// pick pattern
+	uint8_t state = 2;		// pick pattern
 
 	int flag = 0;
 	buf[0] = 0x00;		// Green
@@ -61,6 +67,12 @@ int main(void)
 	buf[7] = 0x00;		// Red
 	buf[8] = 0x00;		// Blue
 
+	for(int i=0; i<8; i++) {
+		rgbBuf[i][I_GREEN] = 0;
+		rgbBuf[i][I_RED] = 0;
+		rgbBuf[i][I_BLUE] = 0;
+	}
+
 	st_init_tmr0();
 	mod_led_init();
 
@@ -70,10 +82,9 @@ int main(void)
 		if(nextTime < st_millis()) {
 			nextTime = nextTime + STEP_TIME;
 
-			ws2812_8_update((void*)buf, BYTE_CHAIN);
-
 			switch( state ) {
 				case 0:
+					ws2812_8_update((void*)buf, BYTE_CHAIN);
 					// Simple test
 					if(flag == 0) {
 						if(buf[0] != 255) {
@@ -113,26 +124,65 @@ int main(void)
 					break;
 
 				case 1:
+					ws2812_8_update((void*)buf, BYTE_CHAIN);
 					// Simple test
 					if(flag == 0) {
-						if(buf[0] != 255) {
-							++buf[0];
+						if(buf[1] != 255) {
+							++buf[1];
 							++buf[4];
 							++buf[8];
 						} else {
 							flag = 1;
 						}
 					} else {
-						if(buf[0] != 0) {
-							--buf[0];
+						if(buf[1] != 0) {
+							--buf[1];
 							--buf[4];
 							--buf[8];
 						} else {
+							// Do last update to turn OFF LEDs with 0 value.
+							ws2812_8_update((void*)buf, BYTE_CHAIN);
 							flag = 0;
+							MCUCR = (1<<SE)|(1<<SM1)|(0<<SM0);			// Use RESET to WakeUp.
+							asm("sleep");
 						}
 					}
 					break;
 					
+				case 2:
+					ws2812_8_update((void*)rgbBuf, BYTE_CHAIN);
+					// Color test. Using RGB buf[][3] {Green, Red, Blue}
+					if(flag == 0) {
+						if(rgbBuf[0][I_GREEN] != 255) {
+							++rgbBuf[0][I_GREEN]; ++rgbBuf[0][I_BLUE];
+							++rgbBuf[1][I_GREEN]; ++rgbBuf[1][I_RED];
+							++rgbBuf[2][I_GREEN];
+							++rgbBuf[3][I_BLUE]; ++rgbBuf[3][I_RED];
+							++rgbBuf[4][I_BLUE];
+							++rgbBuf[5][I_RED];
+							++rgbBuf[6][I_GREEN]; ++rgbBuf[6][I_BLUE]; ++rgbBuf[6][I_RED];
+						} else {
+							flag = 1;
+						}
+					} else {
+						if(rgbBuf[0][I_GREEN] != 0) {
+							--rgbBuf[0][I_GREEN]; --rgbBuf[0][I_BLUE];
+							--rgbBuf[1][I_GREEN]; --rgbBuf[1][I_RED];
+							--rgbBuf[2][I_GREEN];
+							--rgbBuf[3][I_BLUE]; --rgbBuf[3][I_RED];
+							--rgbBuf[4][I_BLUE];
+							--rgbBuf[5][I_RED];
+							--rgbBuf[6][I_GREEN]; --rgbBuf[6][I_BLUE]; --rgbBuf[6][I_RED];
+						} else {
+							// Do last update to turn OFF LEDs with 0 value.
+							ws2812_8_update((void*)rgbBuf, BYTE_CHAIN);
+							flag = 0;
+//							MCUCR = (1<<SE)|(1<<SM1)|(0<<SM0);			// Use RESET to WakeUp.
+//							asm("sleep");
+						}
+					}
+					break;
+				
 				default:
 					state = 0;
 					break;
