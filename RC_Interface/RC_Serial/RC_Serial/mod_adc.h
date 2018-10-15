@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  * 
- * Copyright (c) 2016 Nels D. "Chip" Pearson (aka CmdrZin)
+ * Copyright (c) 2016-2017 Nels D. "Chip" Pearson (aka CmdrZin)
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,29 +21,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * mod_led.h
+ * mod_adc.h
  *
- * Created: 5/18/2015		v0.01	ndp
+ * Created: 7/30/2017 10:59:22 AM
  *  Author: Chip
- * revision:	9/12/2016	v0.02	ndp	mod for FaceBoard
+ * revised: 8/8/2017	0.10	ndp
+ * Revised: 4/25/2018		0.10	ndp	Added changes for RC Servo. Driver is CUSTOM now.
  */ 
 
-#ifndef mod_led_H_
-#define mod_led_H_
 
-#if 0
-#define DEV_LED_DDR			DDRC
-#define DEV_LED_PORT		PORTC
-#define DEV_LED_OUT_PIN		PC2
-#else
-#define DEV_LED_DDR			DDRB
-#define DEV_LED_PORT		PORTB
-#define DEV_LED_OUT_PIN		PB0
-#endif
+#ifndef MOD_ADC_H_
+#define MOD_ADC_H_
 
-void mod_led_init();
-void mod_led_off();
-void mod_led_on();
-void mod_led_toggle(uint8_t val);
+void mod_adc_init();
+void mod_adc_getAndTrigger();
 
-#endif /* mod_led_H_ */
+#endif /* MOD_ADC_H_ */

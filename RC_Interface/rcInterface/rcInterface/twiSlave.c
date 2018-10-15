@@ -112,8 +112,8 @@ flushTwiBuffers( void )
 void
 twiSlaveInit( uint8_t adrs )
 {
-//	TWBR = 92;			// set clock for 100kHz SCL..@ 20MHz
-	TWBR = 32;			// set clock for 100kHz SCL..@ 8MHz
+	TWBR = 92;			// set clock for 100kHz SCL..@ 20MHz
+//	TWBR = 32;			// set clock for 100kHz SCL..@ 8MHz
 	TWSR = 0;			// pre-scale TWPS1:0 = 00
 	
 	TWAMR = 0;			// DON'T mask any address bits.
@@ -251,6 +251,15 @@ ISR( TWI_vect )
 {
 	switch( TWSR )
 	{
+		case TWI_STX_ADR_ACK:				// 0xA8 Own SLA+R has been received; ACK has been returned. Load DATA.
+		txHead = baseIndex;				// Reset index to starting register.
+		//		case TWI_STX_ADR_ACK_M_ARB_LOST:	// 0xB0 Own SLA+R has been received; ACK has been returned
+		case TWI_STX_DATA_ACK:				// 0xB8 Data byte in TWDR has been transmitted; ACK has been received. Load DATA.
+		TWDR = txBuf[txHead++];			// load data and advance index.
+		TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWEA);		// Prepare for next event.
+		// mod_led_toggle(4);
+		break;
+
 		case TWI_SRX_ADR_ACK:		// 0x60 Own SLA+W has been received ACK has been returned. Expect to receive data.
 //		case TWI_SRX_ADR_ACK_M_ARB_LOST:	// 0x68 Own SLA+W has been received; ACK has been returned. RESET interface.
 			TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWEA);		// Prepare for next event. Should be DATA.
@@ -270,15 +279,6 @@ ISR( TWI_vect )
 			// TODO: Set General Address flag
 			TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWEA);		// Prepare for next event. Should be DATA.
 // mod_led_toggle(3);
-			break;
-
-		case TWI_STX_ADR_ACK:				// 0xA8 Own SLA+R has been received; ACK has been returned. Load DATA.
-			txHead = baseIndex;				// Reset index to starting register.
-//		case TWI_STX_ADR_ACK_M_ARB_LOST:	// 0xB0 Own SLA+R has been received; ACK has been returned
-		case TWI_STX_DATA_ACK:				// 0xB8 Data byte in TWDR has been transmitted; ACK has been received. Load DATA.
-			TWDR = txBuf[txHead++];			// load data and advance index.
-			TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWEA);		// Prepare for next event.
-// mod_led_toggle(4);
 			break;
 
 		case TWI_STX_DATA_NACK:		// 0xC0 Data byte in TWDR has been transmitted; NOT ACK has been received. End of Sending.

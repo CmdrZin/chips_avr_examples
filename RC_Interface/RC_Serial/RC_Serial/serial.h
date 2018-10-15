@@ -1,18 +1,18 @@
 /*
  * The MIT License (MIT)
- * 
+ *
  * Copyright (c) 2016 Nels D. "Chip" Pearson (aka CmdrZin)
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,29 +21,29 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * mod_led.h
- *
- * Created: 5/18/2015		v0.01	ndp
- *  Author: Chip
- * revision:	9/12/2016	v0.02	ndp	mod for FaceBoard
- */ 
+* File              : serial.h
+* Compiler          : Atmel Studio 7.0
+* Revision          : $Revision: 2.0 $
+* Date              : $Date: 01/22/2017 $
+* Updated by        : $Author: ndpearson (aka CmdrZin) $
+*
+* Support mail      : chip@gameactive.org
+*
+* Target platform   : All AVRs with USART support
+*
+* Description       : UART communication routines
+****************************************************************************/
+#ifndef SERIAL_H_
+#define SERIAL_H_
 
-#ifndef mod_led_H_
-#define mod_led_H_
 
-#if 0
-#define DEV_LED_DDR			DDRC
-#define DEV_LED_PORT		PORTC
-#define DEV_LED_OUT_PIN		PC2
-#else
-#define DEV_LED_DDR			DDRB
-#define DEV_LED_PORT		PORTB
-#define DEV_LED_OUT_PIN		PB0
-#endif
+#include <stdbool.h>
 
-void mod_led_init();
-void mod_led_off();
-void mod_led_on();
-void mod_led_toggle(uint8_t val);
 
-#endif /* mod_led_H_ */
+void initUsart();
+void sendChar( char );
+char recvChar( void );
+bool isChar();
+
+
+#endif /* SERIAL_H_ */

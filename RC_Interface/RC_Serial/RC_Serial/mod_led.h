@@ -38,7 +38,7 @@
 #else
 #define DEV_LED_DDR			DDRB
 #define DEV_LED_PORT		PORTB
-#define DEV_LED_OUT_PIN		PB0
+#define DEV_LED_OUT_PIN		PB2
 #endif
 
 void mod_led_init();

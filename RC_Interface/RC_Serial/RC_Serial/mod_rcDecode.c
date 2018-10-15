@@ -32,7 +32,7 @@
 #include <stdbool.h>
 
 #include "mod_rcDecode.h"
-#include "twiSlave.h"
+#include "mod_comms.h"
 
 // DEBUG
 #include "mod_led.h"
@@ -120,7 +120,7 @@ ISR(PCINT0_vect)
 				if(timePulse > 250) {
 					timePulse = 250;			// max 250
 				}
-				twiSetRegister( 4, (uint8_t)timePulse );			// STEERING
+				mod_comm_setReg( 4, (uint8_t)timePulse );			// STEERING
 				stateST = MRC_IDLE;
 			}
 			// else not this pin.
@@ -153,7 +153,7 @@ ISR(PCINT0_vect)
 				if(timePulse > 250) {
 					timePulse = 250;			// max 250
 				}
-				twiSetRegister( 3, (uint8_t)timePulse );			// TROTTLE
+				mod_comm_setReg( 3, (uint8_t)timePulse );			// TROTTLE
 				stateTT = MRC_IDLE;
 			}
 			// else not this pin.

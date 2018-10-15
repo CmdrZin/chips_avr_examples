@@ -1,18 +1,18 @@
 /*
  * The MIT License (MIT)
- * 
- * Copyright (c) 2016 Nels D. "Chip" Pearson (aka CmdrZin)
- * 
+ *
+ * Copyright (c) 2016-2017 Nels D. "Chip" Pearson (aka CmdrZin)
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,29 +21,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * mod_led.h
+ * sysTimer.h
  *
- * Created: 5/18/2015		v0.01	ndp
+ * Created: 5/19/2015 1:06:23 PM
  *  Author: Chip
- * revision:	9/12/2016	v0.02	ndp	mod for FaceBoard
+ * revision: 8/1/2015	0.01	ndp
+ * Revised: 7/24/2017	0.10	ndp replace GPIO_TIC system with millis()
+ * hack:	9/24/2018	0.12	ndp	use 4us tics for high resolution in RC signal decode.
  */ 
 
-#ifndef mod_led_H_
-#define mod_led_H_
 
-#if 0
-#define DEV_LED_DDR			DDRC
-#define DEV_LED_PORT		PORTC
-#define DEV_LED_OUT_PIN		PC2
-#else
-#define DEV_LED_DDR			DDRB
-#define DEV_LED_PORT		PORTB
-#define DEV_LED_OUT_PIN		PB0
-#endif
+#ifndef SYSTIMER_H_
+#define SYSTIMER_H_
 
-void mod_led_init();
-void mod_led_off();
-void mod_led_on();
-void mod_led_toggle(uint8_t val);
+long st_millis();
+long getTics4us();
 
-#endif /* mod_led_H_ */
+void st_init_tmr0();
+
+#endif /* SYSTIMER_H_ */
