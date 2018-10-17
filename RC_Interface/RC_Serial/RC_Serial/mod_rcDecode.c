@@ -37,8 +37,16 @@
 // DEBUG
 #include "mod_led.h"
 
+#if 1
+// Rev 0
+#define mc_STEERING	PINB1
+#define mc_THROTTLE	PINB0
+#else
+// Rev 1
 #define mc_STEERING	PINB4
 #define mc_THROTTLE	PINB3
+#endif
+
 
 typedef enum {MRC_IDLE, MRC_MEASURE_ST, MRC_MEASURE_TT} MRC_STATES;
 

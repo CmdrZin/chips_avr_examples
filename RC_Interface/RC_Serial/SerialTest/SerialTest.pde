@@ -1,22 +1,23 @@
 /** 
- * Example GUI
- * 03apr17  ndp
+ * RC Interface GUI
+ * 17oct18  ndp
  * 
  * Supports commands
- * C  - Go to PreUse - SelfCheck mode
- * D  - Dump LOG
- * E  - Erase Log
- * L  - send event
- * R  - lost events
- * T  - get local time
- * S  - set local time
+ * C  - get Car data - Steering & Throttle
+ * D  - 
+ * E  - 
+ * L  - 
+ * R  - 
+ * T  - get Temperature
+ * S  - 
  * V  - get version and build date
  *
- * All time is in iso format: 2017-03-25 14:54:23
  */
  
 
 import processing.serial.*;
+
+static char SYNC = 0x5A;
 
 color bgcolor;			     // Background color
 color fgcolor;			     // Fill color
@@ -33,6 +34,7 @@ String lTimeBox;
 
 char  eTic = 0;
 boolean kFlag = false;
+boolean ledState = false;
 
 String[] eventList = new String[64];
 
@@ -45,8 +47,6 @@ void setup() {
   // Print a list of the serial ports, for debugging purposes:
   printArray(Serial.list());
 
-  // I know that the first port in the serial list on my mac
-  // is always my  FTDI adaptor, so I open Serial.list()[0].
   // On Windows machines, this generally opens COM1.
   // Open whatever port is the one you're using.
   // Use [1] for Windows 10, [0] for Windows 7 it seems.
@@ -57,30 +57,9 @@ void setup() {
   
   mono = createFont("Arial", 12);
   textSize(12);
-
-  // Load Array..replace this with a read from file operation.
-//  for(int i=0; i<10; i++) {
-//    eventList[i] = new String("L" + (char)i + "2017-03-11 19:" + (char)('0'+(int)((i*5)/10)) + (char)('0'+((i%2)*5)) + ":0" + (char)('0'+(int)(i % 6)+3));
-//  }
-
-  // Preload 0-9
-  eventList[0] = new String("L" + (char)0 + "2017-05-08 16:00:03");
-  eventList[1] = new String("L" + (char)1 + "2017-05-08 21:00:04");
-  eventList[2] = new String("L" + (char)2 + "2017-05-09 16:05:05");
-  eventList[3] = new String("L" + (char)3 + "2017-05-09 21:00:06");
-  eventList[4] = new String("L" + (char)4 + "2017-05-10 16:00:07");
-  eventList[5] = new String("L" + (char)5 + "2017-05-10 21:00:08");
-  eventList[6] = new String("L" + (char)6 + "2017-05-11 16:00:09");
-  eventList[7] = new String("L" + (char)7 + "2017-05-11 21:00:03");
-  eventList[8] = new String("L" + (char)8 + "2017-05-12 16:00:04");
-  eventList[9] = new String("L" + (char)9 + "2017-05-12 21:00:05");
-  for(int i=10; i<64; i++) {
-    eventList[i] = new String("L" + (char)i + "2017-06-11 12:34:56");
-  }
-  
 };
 
-
+// Called each Frame update
 void draw() {
   background(bgcolor);
   fill(fgcolor);
@@ -96,41 +75,25 @@ void draw() {
     kFlag = true;
     switch(key) {
       case 'c':
-        myPort.write('C');
-        eListBoxCount = 0;
-        break;
-        
-      case 'd':
-        myPort.write('D');
-        eListBoxCount = 0;
-        break;
-        
-      case 'e':
-        myPort.write('E');
-        eListBoxCount = 0;
+        myPort.write(SYNC);
+        myPort.write(0x11);
         break;
         
       case 'l':
-//        myPort.write("L"+ eTic + "2017-03-11 19:0" + (char)('0'+eTic++) + ":00");
-        for(int i=0; i<64; i++)
-        {
-           myPort.write(eventList[i]);
-           // Delay for O K LF CR response.
-           delay(100);
+        myPort.write(SYNC);
+        myPort.write(0x00);
+        if(ledState) {
+          ledState = false;
+          myPort.write(0x01);
+        } else {
+          ledState = true;
+          myPort.write(0x00);
         }
         break;
         
-      case 'r':
-        myPort.write('R');
-        eListBoxCount = 0;
-        break;
-        
-      case 's':
-        myPort.write("S2017-05-07 20:35:00");
-        break;
-        
       case 't':
-        myPort.write('T');
+        myPort.write(SYNC);
+        myPort.write(0x10);
         break;
 
       case 'v':
@@ -144,7 +107,7 @@ void draw() {
 
   // Display Local Time
   if(lTimeBox != null) {
-    text(lTimeBox, 400, 13, 590, 26);
+    text(lTimeBox, 100, 33, 190, 56);
   }
 
 }
@@ -164,20 +127,23 @@ void serialEvent(Serial myPort) {
     serialCount++;
 
     if (inByte == 10) {
-      String sOut = new String(subset(serialInArray,0,serialCount));
-      // print the values (for debugging purposes only):
-//      println(sOut);
-      print(hex(serialInArray[0],2));
-      println(hex(serialInArray[1],2));
+//      String sOut = new String(subset(serialInArray,0,serialCount));
       
-      eListBox[eListBoxCount] = sOut;
+      String sOutH = new String(hex(serialInArray[0],2) + ' ' + hex(serialInArray[1],2));
+      
+      // print the values (for debugging purposes only):
+//      println(sOutH);
+//      print(hex(serialInArray[0],2));
+//      println(hex(serialInArray[1],2));
+      
+      eListBox[eListBoxCount] = sOutH;
       if(++eListBoxCount > 63) {
         eListBoxCount = 0;
-        
-        // TEST
-        lTimeBox = sOut;
-        
       }
+      eListBox[eListBoxCount] = new String(" ");          // Zero out next display place.
+
+      // TEST
+      lTimeBox = sOutH;
 
       // Reset serialCount:
       serialCount = 0;
