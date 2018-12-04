@@ -32,3 +32,4 @@ These are projects that use the chip_avr_asm_lib and 'C' modules.
 |GlowEyesType2| Simple glowing LEDs for WS2812B.|  
 |USBSerialTester| A simple ASCII serial Tx/Rx module for testing Unity 2017 Serial Communications.|  
 |RC Interface| RC servo signal measuring I2C Slave for AI cars.|  
+|Range Helper| Distance ranger with vibration feedback.|  
