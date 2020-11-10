@@ -1,0 +1,192 @@
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1033{\fonttbl{\f0\fnil\fcharset0 Calibri;}{\f1\fnil\fcharset0 Courier New;}{\f2\fnil Consolas;}}
+{\colortbl ;\red160\green0\blue160;\red255\green255\blue255;\red163\green21\blue21;\red0\green0\blue0;\red0\green128\blue0;}
+{\*\generator Riched20 10.0.19041}\viewkind4\uc1 
+\pard\sl240\slmult1\f0\fs22\lang9 BuildingYourOwnOperatingEnvironment.rtf\par
+08nov20 ndp\par
+09nov20\par
+\par
+Building Your Own Operating Environment\par
+\par
+\par
+Ch 1: Timing - The One ms Tic\par
+Most systems benifit from a know timing duration and the 1 ms clock is pretty much the standard. Having an interrupt \par
+service handle the tic is an easy way to provide this. The basic requirements for a timing system are:\par
+1. Increment a counter every 1 ms.\par
+2. Provide a function to read the counter.\par
+With these, you can have accurate control over how often your functions are run. Control of displays, button scans, and \par
+anything else that requires controlled time are much simpler to impliment.\par
+\par
+Create files sysTime.c and sysTime.h to hold the time functions.\par
+\par
+1. Increment a counter every 1 ms.\par
+The first question is "How large of a counter to use?". The recommended size is 32 bits. At a 1ms rate, this counter would \par
+overflow about every 49 days. If your project is going to run continuosly for longer that that, you'll need to account for the \par
+overflow when doing a "currentTime - lastTime > N" elapsed time check.\par
+\par
+
+\pard\sl240\slmult1\tx360\f1 /* This interrupt service is called every 1 ms. */\par
+ISR(TIMERx_OVF_vect)\par
+\{\par
+\tab ++totalMilliseconds;\par
+\}\par
+
+\pard\sl240\slmult1\f0\par
+2. Provide a function to read the counter.\par
+Since the Arduino and other libraries have a function named "millis()", I would suggest that this new function be named \par
+"st_millis()" or some other derivations to avoid name conflicts if you import other third party code.\par
+\par
+The job of function is fairly simple; Return the milliseconds counter. So, assuming that it's a 32bit unsigned counter:\par
+\par
+
+\pard\sl240\slmult1\tx360\tx720\tx1080\tx1440\tx1800\tx2160\tx2520\tx2880\f1 /* Return the total number of milliseconds since the project started. */\par
+uint32_t st_millis()\par
+\{\par
+\tab uint32_t\tab temp;\tab // make a holder for the counter.\par
+\par
+\tab cli();\tab\tab\tab\tab // Turn OFF interrupts to avoid corruption\par
+\tab\tab\tab\tab\tab\tab\tab // during a multibyte read.\par
+\tab temp = totalMilliseconds;\tab // get a copy while interrupts are disabled.\par
+\tab sei();\tab\tab\tab\tab // Turn interrupts back ON.\par
+\par
+\tab return temp;\tab\tab // return a 'clean' copy of the counter.\par
+\}\par
+
+\pard\sl240\slmult1\f0\par
+These two establish the basic system time capabilities provided that one of the MCU counters is set to generate an \par
+interrupt every 1 ms.\par
+A look at the ATmega4808/4809 data sheet shows that there are multiple counters available:\par
+One 16bit type A (TCA)\par
+Four 16bit type B (TCBn)\par
+One RTC\par
+The first two types, TCA and TCB, are multi-purpose counter/timers. The TCA (formally Timer0) is normally used for \par
+generating the timer tic. The RTC's main purpose is as a time counter, but is has limited clock control. It's good as a 1 \par
+second tic counter, but we need 1 ms and the dividers are all powers of 2. So, since the TCB counters are more \par
+flexable, they will be saved for other things and the TCA counter will be used to generate an interrupt every 1 ms.\par
+\par
+Unless the systems has critical power issues, the 20 MHz internal clock will be used.\par
+Setting the System clock\par
+\par
+OSC20: FREQSEL of FUSE.OSCCFG\par
+CLK_MAIN\par
+\tab CLK_CPU\par
+\tab CLK_PER\par
+Source: CLKCTRL.MCLKCTRLA : CLKSEL (default 0x00 20 MHz)\par
+Prescaler: CLKCTRL.MCLKCTRLB :PDIV[3:0] (default 0x08 div6 PEN=1) set PEN = 0 to disable Prescaler.\par
+to change either: Key(IOREG) -> CPU.CCP then write within 4 cycles.\par
+Except for disabling the prescaler, all of the default settings generate a 20 MHz clock.\par
+\par
+\cf1\highlight2\f2\fs19 CPU_CCP\cf3  \cf4 =\cf3  \cf1 CCP_IOREG_gc\cf4 ;\cf3\tab\tab\cf5 // unlock Change Protected Registers\cf4\par
+\cf1 CLKCTRL_MCLKCTRLB\cf3  \cf4 =\cf3  \cf4 0;\cf3\tab\tab\cf5 // Clear PEN bit to disable prescaler\cf4\par
+\cf0\highlight0\f0\fs22\par
+Since the sysClk is 20 MHz, if it is divided by 20,000 to get 1 kHz we get a 1 ms tic every time the counter overflows.\par
+Therefore,  set the Clock divider to DIV1 (CTRLA:CLKSEL[2:0] = 000) and the Period register to 20,000-1 (TCA0.PER = 0x4E1F) \par
+which sets the TOP value for the counter.\par
+Set the Mode to NORMAL (default) (CTRLB.WGMODE[2:0] = 000).\par
+Next, the counter is set to Normal Operation mode and counting UP (TCA0.CTRLE.DIR = 1).\par
+Then, the interrupt on overflow bit is set (TCA0.INTCTRL.OVF = 1). This will set the TCA0.INTFLAGS.OVF bit to 1 on \par
+interrupt. NOTE: This bit has to be cleared by the interrupt service by writing a 1 to it. So modify the ISR (see above)\par
+\par
+
+\pard\sl240\slmult1\tx360\f1 /* This interrupt service is called every 1 ms. */\par
+ISR(TCA0_OVF_vect)\par
+\{\par
+\tab ++totalMilliseconds;\par
+\par
+\tab TCA0.SINGLE.INTFLAGS = TCA_SINGLE_OVF_bm;\tab // clear interrupt flag.\par
+\tab // or\par
+//\tab TCA0.INTFLAGS |= (1<<TCA0.OVF);\tab // clear interrupt flag.\par
+\}\par
+
+\pard\sl240\slmult1\f0\par
+Finally, enable the counter (TCA0.CTRLA.ENABLE = 1) and enable global interrupts with \f1 sei()\f0 .\par
+All of this should be put in an initialization function call \f1 init_time()\f0  for example.\par
+\par
+
+\pard\sl240\slmult1\tx360\f1 /* Initialize system clock and timers. ATmega4808/4809 */\par
+void init_time()\par
+\{\par
+\tab // Initialize MCU clock for 20 MHz\par
+\par
+\par
+\tab // Initialize TCA0 to generate an OVF interrupt every 1 ms.\par
+\tab TCA0.CTRLA = (0<<CLKSEL2)|(0<<CLKSEL1)|(0<<CLKSEL0);\par
+\tab TCA0.PER = 0x4E1F;\tab\tab // 20,000 - 1\par
+\tab TCA0.CTRLB = (0<<WGMODE2)|(0<<WGMODE1)|(0<<WGMODE0);\par
+\tab TCA0.CTRLE = (1<<DIR);\par
+\tab TCA0.INTCTRL = (1<<OVF);\par
+\tab TCA0.CTRLA |= (1<<ENABLE);\tab // turn ON the timer.\par
+\tab // NOTE: Global interrupts are enabled with sei() after all interrupt \par
+\tab // generating modules are initialized.\par
+\}\par
+
+\pard\sl240\slmult1\f0\par
+One more optional function could be added to the sysTime code: \f1 is10msFlagSet(uint8_t n)\f0\par
+10 ms is a common time interval used for button debounce and display multiplexing and it is simple to add support for\par
+it to the existing code. It will test one of n flags that are set every 10 ms and return TRUE if the flag is set and also \par
+reset the flag. Just call this function each time through the main processing loop, test the return value for TRUE, and \par
+the associated process will be preformed every 10 ms.\par
+Modify the ISR to control a counter that counts to ten, sets a byte to 0xFF, and then resets itself to zero.\par
+
+\pard\sl240\slmult1\tx360\f1\par
+static uint8_t st_flags;\par
+\par
+ISR(TCA0_OVF_vect)\par
+\{\par
+\tab static uint8_t counter = 0;\par
+\par
+\tab ++totalMilliseconds;\par
+\par
+\tab if(++counter >= 10) \{\par
+\tab\tab flags = 0xFF;\par
+\tab\tab counter = 0;\par
+\tab\}\par
+\par
+\tab TCA0.SINGLE.INTFLAGS = TCA_SINGLE_OVF_bm;\tab // clear interrupt flag.\par
+\}\par
+
+\pard\sl240\slmult1\f0\par
+\f1 /* flag 0:7 */\par
+bool is10msFlagSet( uint8_t flag )\par
+\{\par
+
+\pard\sl240\slmult1\tx360\tx720\tx1080\tx1440\tx1800\tx2160\tab uint8_t mask = 0x01;\par
+\tab bool result = false;\par
+\par
+\tab for( uint8_t i=0; i<flag; i++ )\par
+\tab\{\par
+\tab\tab mask <<= 1;\par
+\tab\}\par
+\tab if( flags & mask )\par
+\tab\{\par
+\tab\tab result = true;\par
+\tab\tab flags &= ~mask;\tab\tab // clear flag \tab\par
+\tab\}\par
+\par
+\tab return result;\par
+
+\pard\sl240\slmult1\}\par
+\f0 (see Utilities : sysTimer.c & .h for final code.)\par
+\par
+\par
+\par
+\par
+\par
+\par
+\par
+\par
+\par
+\par
+\par
+\par
+\par
+\par
+\par
+\par
+\par
+\par
+\par
+\par
+\par
+\par
+}
+ 
