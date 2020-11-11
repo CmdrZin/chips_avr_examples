@@ -1,0 +1,24 @@
+AsmBufferShift.txt
+10nov20 ndp
+
+
+Log Notes for ASM Buffer Shift
+
+ref2: AT1886_C_ASM_ICD.pdf
+
+Target: AtTiny84A, 8MHz
+
+Add ASM file with "uint8_t shiftRight(uint8_t* buffer, int size)" function.
+Shifts a buffer of uint8_ts one bit and returns LSbit (d0). size = bytes in buffer.
+1. add genera include statement		#include <avr/io.h>
+2. add global name of function		.global shiftRight
+3. add a description block describing how registers are used and wht the function does.
+4. function code structure
+shiftRight:
+    ...
+    ...
+    ret
+5. put prototype in .h file.
+extern uint8_t shiftRight(uint8_t* buffer, uint8_t size);
+6. fill in code per AT1886_C_asm documtent.[2] NOTE register usage restrictions.
+NOTE: pointers and 16bit data in FLASH is stored LSB,MSB.
