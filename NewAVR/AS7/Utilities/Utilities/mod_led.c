@@ -26,7 +26,7 @@
  * Created:	05/18/2015	v0.01	ndp
  *  Author: Chip
  * revision: 09/12/2016	v0.02	ndp	mod for FaceBoard
- * revision: 11/10/2020	v0.03	ndp	update
+ * revision: 11/10/2020	v0.03	ndp	update for megaAVR 0-series
  */ 
 
 #include <avr/io.h>
@@ -34,14 +34,14 @@
 #include "mod_led.h"
 
 /* Hardware definitions. Modify to match LED connection. */
-#define DEV_LED_DDR		DDRB
-#define DEV_LED_PORT	PORTB
-#define DEV_LED_OUT_PIN	PB2
+#define DEV_LED_DDR		PORTF_DIR
+#define DEV_LED_PORT	PORTF_OUT
+#define DEV_LED_OUT_PM	PIN5_bm
 
 /* Call this once before using any mod_led function. */
 void mod_led_init()
 {
-	DEV_LED_DDR |= (1<<DEV_LED_OUT_PIN);			// set HIGH for output
+	DEV_LED_DDR |= DEV_LED_OUT_PM;			// set HIGH for output
 
 	return;
 }
@@ -52,7 +52,7 @@ void mod_led_init()
 void mod_led_off()
 {
 	// Reverse logic for demo board use.
-	DEV_LED_PORT |= (1<<DEV_LED_OUT_PIN);			// set HIGH
+	DEV_LED_PORT |= DEV_LED_OUT_PM;			// set HIGH
 
 	return;
 }
@@ -63,7 +63,7 @@ void mod_led_off()
 void mod_led_on()
 {
 	// Reverse logic for demo board use.
-	DEV_LED_PORT &= ~(1<<DEV_LED_OUT_PIN);			// set LOW
+	DEV_LED_PORT &= ~DEV_LED_OUT_PM;			// set LOW
 
 	return;
 }
