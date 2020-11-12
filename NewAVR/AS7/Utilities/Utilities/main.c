@@ -37,23 +37,31 @@
 
 #include "sysTime.h"
 #include "mod_led.h"
+#include "twiRegSlave.h"
 
-#define LED_DELAY	500UL
+#define LED_DELAY	100UL
+#define TWI_DELAY	1000UL
+#define SLAVE_ADRS	0x56
+
+volatile uint8_t rxRegister[16];
+volatile uint8_t txRegister[16];
 
 int main(void)
 {
-	uint32_t nextTime = 0UL;
-	uint8_t loopCount = 0;
+	uint32_t ledTime = 0UL;
+	uint32_t twiTime = 0UL;
+	int loopCount = 0;
 	
 	init_time();		// set up clock and timers
 	mod_led_init();		// set up LED pin
+	twiRegSlaveInit(SLAVE_ADRS, rxRegister, 16, txRegister, 16);
 
 	sei();				// enable global interrupts
 	
 	// Start up Blink 3 times.
 	while(loopCount < 7) {
-		if( st_millis() > nextTime ) {
-			nextTime += LED_DELAY;
+		if( st_millis() > ledTime ) {
+			ledTime += LED_DELAY;
 			if(loopCount % 2) {
 				mod_led_on();
 			} else {
@@ -66,10 +74,25 @@ int main(void)
 	/* Replace with your application code */
 	while (1)
 	{
+#if 0
 		// Check every ms
-		if( st_millis() > nextTime ) {
-			nextTime += LED_DELAY;
+		if( st_millis() > ledTime ) {
+			ledTime += LED_DELAY;
 			mod_led_toggle(250);
+		}
+#endif
+
+		if( st_millis() > twiTime ) {
+			twiTime += TWI_DELAY;
+			// TODO: Replace this with ADC read of temperature.
+			twiSetRegister(1, loopCount>>8);
+			twiSetRegister(2, loopCount++);
+		}
+
+		if( twiGetRegister(1) ) {
+			mod_led_on();
+		} else {
+			mod_led_off();
 		}
 	}
 }

@@ -10,6 +10,11 @@ Target: megaAVR 0-series devices.
 This I2C interface uses a Register File system instead of a FIFO so that it more 
 closely matches the operation of I2C slave hardware devices.
 
+First byte after SDA_W is the register index for writing or reading.
+Successive reads increment the tx register index.
+Multiple byte writes increment the rx register index on each byte after the first.
+
+
 Features
 User defined register file size.
 Seven bit addressing.
@@ -22,18 +27,20 @@ App Note: How to link in peripherals to the Register File.
 App Note: Custumization. Adding change detection flags for incoming data.
 
 API Functions
-void init_i2cRegSlave(uint8_t address, uint8_t* regFile, uint8_t regFileSize);
-	Set the Slave address to address.
-	Set the Register File buffer to start ar regFile.
-	Set the size of the Register File to regFileSize.
+void twiRegSlaveInit(uint8_t adrs,
+				uint8_t* rxRegFile, uint8_t rxRegFileSize,
+				uint8_t* txRegFile, uint8_t txRegFileSize);
+	Set the Slave address to adrs.
+	Set the rx & tx Register File buffer start points.
+	Set the size of the rx & tx Register Files.
 
-uint8_t* getRegFilePtr();
+uint8_t* twiGetRegisterFilePtr();
 	Return a pointer to the RegisterFile[0].
 
-void setReg(uint8_t index, uint8_t val);
+void twiSetRegister(uint8_t index, uint8_t val);
 	Set RegisterFile[index] to val.
 
-uint8_t getReg(uint8_t index);
+uint8_t twiGetRegister(uint8_t index);
 	Return value from RegisterFile[index];
 
 rfCallbackTable (FLASH)

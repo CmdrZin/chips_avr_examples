@@ -21,55 +21,30 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * twiSlave.h
+ * twiRegSlave.h
  *
- * Created: 8/10/2015	0.01	ndp
+ * Created: 08/10/2015	0.01	ndp
  *  Author: Chip
- * Revised: 9/24/2018	0.02	ndp	Support indexed read.
+ * Revised: 09/24/2018	0.02	ndp	Support indexed read.
+ * Revised: 11/11/2020	0.03	Update for megaAVR 0-series.
  */ 
 
 
-#ifndef TWISLAVE_H_
-#define TWISLAVE_H_
+#ifndef TWIREGSLAVE_H_
+#define TWIREGSLAVE_H_
 
 #include <stdbool.h>
 
-
-/* *** Buffer defines *** */
-// allowed buffer sizes: 2^n up to 256 bytes
-
-#define TWI_RX_BUFFER_SIZE  ( 32 )
-#define TWI_RX_BUFFER_MASK  ( TWI_RX_BUFFER_SIZE - 1 )
-
-#if ( TWI_RX_BUFFER_SIZE & TWI_RX_BUFFER_MASK )
-#  error TWI_RX_BUFFER_SIZE is not a power of 2
-#endif
-
-#define TWI_TX_BUFFER_SIZE ( 32 )
-#define TWI_TX_BUFFER_MASK ( TWI_TX_BUFFER_SIZE - 1 )
-
-#if ( TWI_TX_BUFFER_SIZE & TWI_TX_BUFFER_MASK )
-#  error TWI_TX_BUFFER_SIZE is not a power of 2
-#endif
-
-
 /* *** GLobal Protoptyes *** */
 
-void	twiSlaveInit( uint8_t adrs );		// Set up TWI hardware and set Slave I2C Address.
-void	twiSlaveEnable( void );				// Enable I2C Slave interface.
+void	twiRegSlaveInit( uint8_t address, 
+			volatile uint8_t* rxRegFile, uint8_t rxRegFileSize, 
+			volatile uint8_t* txRegFile, uint8_t txRegFileSize);
 
-void	twiTransmitByte( uint8_t data );	// Place data into output buffer.
+uint8_t* twiGetRegFilePtr();	// Return a pointer to the RegisterFile[0].
 
-void	twiSetRegister( uint8_t reg, uint8_t val );
-void	twiSetRegisterIndex( uint8_t val );
-uint8_t	twiGetRegisterIndex( void );
+void	twiSetRegister( uint8_t reg, uint8_t val );		// called by sensor functions
 
-uint8_t	twiReceiveByte( void );				// Read data from input buffer.
-bool	twiDataInReceiveBuffer( void );		// Check for available data in input buffer. This function should return TRUE
-											// before calling twiReceiveByte() to get data.
-void	twiClearOutput( void );				// Reset the output buffer to empty. Used recover from sync errors.
+uint8_t	twiGetRegister( uint8_t reg );		// get register value.
 
-void	twiStuffRxBuf( uint8_t data );	// Allows manual input into input buffer for testing.
-
-
-#endif /* TWISLAVE_H_ */
+#endif /* TWIREGSLAVE_H_ */

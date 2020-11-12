@@ -8,3 +8,5 @@ mod_led.c
 
 sysTime.c
 
+twiRegSlave.c
+

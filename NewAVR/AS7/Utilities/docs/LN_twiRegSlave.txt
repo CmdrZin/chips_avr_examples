@@ -1,14 +1,60 @@
 LN_twiRegSlave.txt
-11/10/2020 ndp
+10nov2020 ndp
+12nov2020
 
 
 Log Notes for developing a TWI Register Slave I2C driver
 
 ref1: DN_twiRegSlave.txt
 ref2: megaAVR0-series-Family-Data-Sheet-DS40002015B.pdf
+ref3: ATmega4808-09-DataSheet-DS40002173B.pdf
 
 Target: megaAVR 0-series devices.
 
 
 This I2C interface uses a register file system instead of a FIFO so that it more 
 closely matches the operation of I2C slave hardware devices.
+
+Use state machine as with other TWI drivers.
+Set up SDASETUP & SDAHOLD first. CTRLA.
+To start TWI Slave, write TWIn.SADDR = adrs and set TWIn.SCTRLA.ENABLE = 1.
+Adrs d0: 1=Master Read (Slave tx), 0=Master Write (Slave rx)
+SCL forced LOW when an interrupt flag is set.
+Slave adrs/stop intr flag is set with Start+Valid adrs or a general call adrs.
+Bus error flag if Start immediately followed by Stop.
+S1: Adrs+R	 w/ACK	- tx Data	data intr -> ACK:Continue, NACK:stop
+S2: Adrs+W	 w/ACK	- rx Data	data intr -> ACK
+S3: NACK
+S4: STOP
+Smart Mode: DIF auto cleared if TWIn.SDATA accessed.
+DIF: TWIn.SSTATUS.DIF data intr flag.
+APIF: TWIn.SSTATUS.APIF adrs or Stop intr flag.
+Check INTFLAGS reg for multiple interrupts.
+
+CTRLA:	SDAHOLD[1:0] = 0x3
+SCTRLA:	DIEN=1, APIEN=1, PIEN=1, SMEN=1, ENABLE=1
+	Data intr, Adrs/Stop intr, Use adr match, Smart mode, TWI Enabled.
+SCTRLB:
+Master Writing (0)
+	ACK+SCMD[1:0]=0x2	Complete transaction, wait for Start
+	ACK+SCMD[1:0]=0x3	APIF or DIF
+Master Reading (1)
+	ACK+SCMD[1:0]=0x2	Wait for Start
+	ACK+SCMD[1:0]=0x3	APIF or DIF
+SSTATUS
+	DIF=1		successful data r/w
+	APIF=1	Valid adrs match
+	CLKHOLD=1	in clock stretch mode
+	RXACK		last Master read ACK(0)/NACK(1)
+	COLL=1	Bus Error
+	BUSERR=1	Bus Error
+	DIR		Direction Master Read(1), Master Write(0)
+	AP		APIF caused by STOP(0), ADR(1)
+SADDR = adrs<<1 | 0
+SDATA = data in/out
+SADDRMASK (default) 0
+(see twiRegSlave.c,.h)
+First byte after SDA_W is the register index for writing or reading.
+Successive reads increment the tx register index.
+Multiple byte writes increment the rx register index on each byte after the first.
+
