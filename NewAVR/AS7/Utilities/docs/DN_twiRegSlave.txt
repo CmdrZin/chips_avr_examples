@@ -1,0 +1,47 @@
+DN_twiRegSlave.txt
+11/10/2020 ndp
+
+
+Design Notes for TWI Register Slave I2C driver
+
+Target: megaAVR 0-series devices.
+
+
+This I2C interface uses a Register File system instead of a FIFO so that it more 
+closely matches the operation of I2C slave hardware devices.
+
+Features
+User defined register file size.
+Seven bit addressing.
+Build-time callback table for writes to Register File.
+
+Future Options
+Global address detetion (addres 0x00).
+Ten bit addressing.
+App Note: How to link in peripherals to the Register File.
+App Note: Custumization. Adding change detection flags for incoming data.
+
+API Functions
+void init_i2cRegSlave(uint8_t address, uint8_t* regFile, uint8_t regFileSize);
+	Set the Slave address to address.
+	Set the Register File buffer to start ar regFile.
+	Set the size of the Register File to regFileSize.
+
+uint8_t* getRegFilePtr();
+	Return a pointer to the RegisterFile[0].
+
+void setReg(uint8_t index, uint8_t val);
+	Set RegisterFile[index] to val.
+
+uint8_t getReg(uint8_t index);
+	Return value from RegisterFile[index];
+
+rfCallbackTable (FLASH)
+	This is a table of function pointers indexed by the Register File index.
+	If the function pointer is not NULL, the functions is called when ever the 
+	Register File indexed location is written to.
+	To minimze processing time within the interrupt handler, these functions 
+	normally just set a flag to tell the main system that the associated Register 
+	File value has changed.
+	NOTE: This feature can be disabled.
+

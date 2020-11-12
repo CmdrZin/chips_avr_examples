@@ -1,0 +1,14 @@
+LN_twiRegSlave.txt
+11/10/2020 ndp
+
+
+Log Notes for developing a TWI Register Slave I2C driver
+
+ref1: DN_twiRegSlave.txt
+ref2: megaAVR0-series-Family-Data-Sheet-DS40002015B.pdf
+
+Target: megaAVR 0-series devices.
+
+
+This I2C interface uses a register file system instead of a FIFO so that it more 
+closely matches the operation of I2C slave hardware devices.
