@@ -42,6 +42,8 @@
 // DEBUG
 #include "mod_led.h"
 
+#define CALLBACK_ENABLED	false		// set to true to enable this feature.
+
 /* *** Private functions *** */
 void twiSetRxRegisterIndex( uint8_t val );
 void twiSetTxRegisterIndex( uint8_t val );
@@ -56,6 +58,33 @@ typedef enum {
 	TWI_BUS_ERROR,			// Collision or other Bus error.
 	TWI_STOP				// STOP condition
 } TWI_SLAVE_STATES;
+
+#if CALLBACK_ENABLED
+#include <avr/pgmspace.h>
+
+void cbFunc0();
+void cbFunc1();
+void cbFunc2();
+void cbFunc3();
+void cbFunc4();
+void cbFunc5();
+
+typedef struct {
+		void	(*function)();
+} FUNCTION_PTR;
+
+// number of entries should match rxRegSize value. 
+const FUNCTION_PTR CALLBACKS[] PROGMEM = {
+	{ (void(*)())0 },	// Register 0..no callback
+	{ cbFunc1 },		// Register 1
+	{ cbFunc2 },		// Register 2
+	{ cbFunc3 },		// Register 3
+	{ cbFunc4 },		// Register 4
+	{ (void(*)())0 }	// Register 5..no callback
+};
+#define CBF_SIZE	(sizeof(CALLBACKS)/sizeof(FUNCTION_PTR))	// index < this
+static void (*callback_func)();
+#endif
 
 /* *** Local variables *** */
 static volatile uint8_t* rxRegisters;
@@ -218,7 +247,20 @@ ISR( TWI0_TWIS_vect )
 			} else {
 				// Block overflow write.
 				if( rxRegIndex < rxRegSize ) {
+#if CALLBACK_ENABLED
+					rxRegisters[rxRegIndex] = TWI0_SDATA;		// Save data into RX buffer
+					// Call the callback function if not NULL.
+					if( rxRegIndex < CBF_SIZE ) {
+						callback_func = (void(*)())pgm_read_ptr_near(&CALLBACKS[rxRegIndex].function);
+						if( callback_func != 0 ) {
+							callback_func();
+						}
+					}
+					// finish by incrementing index.
+					++rxRegIndex;
+#else
 					rxRegisters[rxRegIndex++] = TWI0_SDATA;		// Save data into RX buffer
+#endif
 				}
 // mod_led_toggle(2);
 			}
@@ -246,3 +288,26 @@ ISR( TWI0_TWIS_vect )
 			break;
 	}
 }
+
+#if CALLBACK_ENABLED
+// Place callback functions here.
+void cbFunc1()
+{
+	mod_led_toggle(1);
+}
+
+void cbFunc2()
+{
+	mod_led_toggle(2);
+}
+
+void cbFunc3()
+{
+	mod_led_toggle(3);
+}
+
+void cbFunc4()
+{
+	mod_led_toggle(4);
+}
+#endif

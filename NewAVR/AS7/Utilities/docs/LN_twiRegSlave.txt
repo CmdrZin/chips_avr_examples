@@ -1,7 +1,6 @@
 LN_twiRegSlave.txt
 10nov2020 ndp
-12nov2020
-
+13nov2020
 
 Log Notes for developing a TWI Register Slave I2C driver
 
@@ -10,7 +9,6 @@ ref2: megaAVR0-series-Family-Data-Sheet-DS40002015B.pdf
 ref3: ATmega4808-09-DataSheet-DS40002173B.pdf
 
 Target: megaAVR 0-series devices.
-
 
 This I2C interface uses a register file system instead of a FIFO so that it more 
 closely matches the operation of I2C slave hardware devices.
@@ -29,7 +27,7 @@ S4: STOP
 Smart Mode: DIF auto cleared if TWIn.SDATA accessed.
 DIF: TWIn.SSTATUS.DIF data intr flag.
 APIF: TWIn.SSTATUS.APIF adrs or Stop intr flag.
-Check INTFLAGS reg for multiple interrupts.
+Check INTFLAGS reg for multiple interrupts. (N/A..no INTFLAGS for TWI)
 
 CTRLA:	SDAHOLD[1:0] = 0x3
 SCTRLA:	DIEN=1, APIEN=1, PIEN=1, SMEN=1, ENABLE=1
@@ -58,3 +56,33 @@ First byte after SDA_W is the register index for writing or reading.
 Successive reads increment the tx register index.
 Multiple byte writes increment the rx register index on each byte after the first.
 
+Callback (Option)
+When SDATA is stored into a register, the index is used to select a Callback 
+function from the CallbackList[]. To minimize interrupt service time, these 
+should do very little processing. They usually just set a flag to show that the 
+data has or could have changed.
+#define CALLBACK_ENABLED FALSE	// set to TRUE to enable.
+Struct needed to declare a function pointer to make an array of function pointers.
+typdef struct {
+    void (*function)();
+} FUNCTION_PTR;
+Make an array to be stored into FLASH.
+const FUNCTION_PTR Callbacks[] PROGMEM = {
+    { function1 },
+    { function1 },
+      ...
+    { functionN }
+};
+Use (void(*)())0 for a NULL function pointer.
+Size check on index needed to prevent invalid pointer call.
+Create prototypes and the functions.
+void function1();
+...
+void function1()
+{
+    // do something
+}
+When the rxRegister[index] is written to, use the index to get the function 
+pointer and call the callback function.
+Size check on index needed to prevent invalid pointer use.
+(see twiRegSlave.c,.h)
