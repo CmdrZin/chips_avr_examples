@@ -25,6 +25,8 @@
  * Author: Chip
  *
  * Created on November 7, 2020, 1:42 PM
+ *
+ * newavr-main.c code from "TB3217: Getting Started with TCA"  Appendix 7-1 
  */
 
 

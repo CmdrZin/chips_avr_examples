@@ -25,6 +25,8 @@
  *
  * Created: 11/7/2020 1:08:33 PM
  * Author : Chip
+ *
+ * main.c code from "TB3217: Getting Started with TCA"  Appendix 7-1 
  */ 
 
 #define PERIOD_EXAMPLE_VALUE    (0x0CB6)
