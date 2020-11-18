@@ -11,3 +11,4 @@ These are projects that use Atmel Studio 7.
 | -- mod_led | Simple single LED control functions.|   
 | -- sysTimer | Basic Timer setup and millis() function.|   
 | -- twiRegSlave | Register File TWI I2C Slave with callback option.|   
+| -- serialPoll | Simplest serial using polling and blocking calls to get and send data.|   

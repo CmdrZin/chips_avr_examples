@@ -23,12 +23,15 @@
 *
 * Utilities
 *
-* Created: 11/9/2020 10:46:43 AM
+* Created: 11/09/2020 10:46:43 AM
 * Author : Chip
-*
+* Revised: 11/15/2020
+*	
 * This project holds utility function files with simple test code in main.c
-*   sysTime: Clock and Timer support.
-*	mod_led: Single LED control.
+*   sysTime:	 Clock and Timer support.
+*	mod_led:	 Single LED control.
+*	twiRegSlave: Data Register based Slave I2C interface.
+*	serialPoll:	 Polled USART interface.
 *
 */
 
@@ -38,10 +41,12 @@
 #include "sysTime.h"
 #include "mod_led.h"
 #include "twiRegSlave.h"
+#include "serialPoll.h"
 
-#define LED_DELAY	100UL
-#define TWI_DELAY	1000UL
-#define SLAVE_ADRS	0x56
+#define LED_DELAY		1000UL		// N * 1ms
+#define TWI_DELAY		1000UL
+#define SLAVE_ADRS		0x56
+#define USART0_DELAY	1000UL
 
 volatile uint8_t rxRegister[16];
 volatile uint8_t txRegister[16];
@@ -50,11 +55,14 @@ int main(void)
 {
 	uint32_t ledTime = 0UL;
 	uint32_t twiTime = 0UL;
+	uint32_t usart0Time = 0UL;
+
 	int loopCount = 0;
 	
 	init_time();		// set up clock and timers
 	mod_led_init();		// set up LED pin
 	twiRegSlaveInit(SLAVE_ADRS, rxRegister, 16, txRegister, 16);
+	USART0_init(9600);
 
 	sei();				// enable global interrupts
 	
@@ -74,14 +82,15 @@ int main(void)
 	/* Replace with your application code */
 	while (1)
 	{
-#if 0
+#if 1
 		// Check every ms
 		if( st_millis() > ledTime ) {
 			ledTime += LED_DELAY;
 			mod_led_toggle(250);
 		}
 #endif
-
+#if 0
+		// Demo TWI I2C
 		if( st_millis() > twiTime ) {
 			twiTime += TWI_DELAY;
 			// TODO: Replace this with ADC read of temperature.
@@ -94,5 +103,18 @@ int main(void)
 		} else {
 			mod_led_off();
 		}
+#endif
+#if 0
+		// Demo USART0
+		if( st_millis() > usart0Time ) {
+			usart0Time += USART0_DELAY;
+			// Send a 'tic' character.
+			USART0_sendChar('*');
+		}
+		// Echo back any received character.
+		if( USART0_isChar() ) {
+			USART0_sendChar( USART0_recvChar() );
+		}
+#endif
 	}
 }

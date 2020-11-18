@@ -133,6 +133,12 @@
     <Compile Include="mod_led.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="serialPoll.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="serialPoll.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="sysTime.c">
       <SubType>compile</SubType>
     </Compile>
