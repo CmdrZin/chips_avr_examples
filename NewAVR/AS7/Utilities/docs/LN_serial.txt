@@ -16,7 +16,7 @@ serialPoll	- Simplest serial support using polling and blocking calls.
 serialFile	- Single message Send/Receive using interrupts and a message array.
 serial	- Standard FIFO based interrupt driven serial module.
 
-For PC host through debugger: USART3 (PB0:Tx,PB1:Rx)
+For PC host through USB debugger: USART3 (PB0:Tx,PB1:Rx)
 for Arduino and other direct connections: USART0 (PA0:Tx, PA1:Rx)
 System clock: 20 MHz		Baud: 9600 8N1
 
@@ -24,4 +24,20 @@ serialPoll
 Use sample code from Section 3.[4]
 Add some comments and adjustments.
 (see serialPoll.c,.h)
+
+Test with USB USART3 to Atmel Studio Data Visualizer
+Copy USART0 code functions and rename to USART3.
+Add USART3 demo code to main.c
+Reduce usart delay to 100ms..hmm..
+Use MPLAB X..Tools > Plugins..MPLAB Data Visualizer > Install..nope.
+com.microchip.mplab.libs.matchtoolcommport to be installed..Need 1.1..not
+compatable with MPLAB 5.25..
+Get stand alone MPLAB Data Visualizer(Windows)..hmm..check output pins..Ah,
+no signals..check code..USART0 works. Check settings for USART3..same..
+try direct IO to PB0..ok, causes serial data..so USART3 TX not enabled? 
+DOH!..not calling USART3_init(9600)..works now..Write and Echo back..
+Atmel Studio 7 Data Visualizer works also..commit.
+
+
+
 

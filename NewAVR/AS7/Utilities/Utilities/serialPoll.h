@@ -43,5 +43,10 @@ void USART0_sendChar(char data);
 char USART0_recvChar();
 bool USART0_isChar();
 
+void USART3_init(uint16_t baud);
+void USART3_sendChar(char data);
+char USART3_recvChar();
+bool USART3_isChar();
+
 
 #endif /* SERIALPOLL_H_ */

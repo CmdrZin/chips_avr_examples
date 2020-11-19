@@ -46,7 +46,7 @@
 #define LED_DELAY		1000UL		// N * 1ms
 #define TWI_DELAY		1000UL
 #define SLAVE_ADRS		0x56
-#define USART0_DELAY	1000UL
+#define USART_DELAY		1000UL
 
 volatile uint8_t rxRegister[16];
 volatile uint8_t txRegister[16];
@@ -55,7 +55,7 @@ int main(void)
 {
 	uint32_t ledTime = 0UL;
 	uint32_t twiTime = 0UL;
-	uint32_t usart0Time = 0UL;
+	uint32_t usartTime = 0UL;
 
 	int loopCount = 0;
 	
@@ -63,6 +63,7 @@ int main(void)
 	mod_led_init();		// set up LED pin
 	twiRegSlaveInit(SLAVE_ADRS, rxRegister, 16, txRegister, 16);
 	USART0_init(9600);
+	USART3_init(9600);
 
 	sei();				// enable global interrupts
 	
@@ -106,14 +107,26 @@ int main(void)
 #endif
 #if 0
 		// Demo USART0
-		if( st_millis() > usart0Time ) {
-			usart0Time += USART0_DELAY;
+		if( st_millis() > usartTime ) {
+			usartTime += USART_DELAY;
 			// Send a 'tic' character.
 			USART0_sendChar('*');
 		}
 		// Echo back any received character.
 		if( USART0_isChar() ) {
 			USART0_sendChar( USART0_recvChar() );
+		}
+#endif
+#if 1
+		// Demo USART3
+		if( st_millis() > usartTime ) {
+			usartTime += USART_DELAY;
+			// Send a 'tic' character.
+			USART3_sendChar('*');
+		}
+		// Echo back any received character.
+		if( USART3_isChar() ) {
+			USART3_sendChar( USART3_recvChar() );
 		}
 #endif
 	}

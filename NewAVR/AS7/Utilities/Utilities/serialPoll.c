@@ -45,23 +45,23 @@
 #include "serialPoll.h"
 
 #define F_CPU 20000000L			// Clock Speed 20 MHz
-#define USART0_BAUD_RATE(BAUD_RATE) ((float)(F_CPU * 64)/(16 * (float)BAUD_RATE) + 0.5)
+#define USART_BAUD_RATE(BAUD_RATE) ((float)(F_CPU * 64)/(16 * (float)BAUD_RATE) + 0.5)
 
 /* Initialized USART0 registers and IO pins */
 void USART0_init(uint16_t baud)
 {
 	/* Set IO port pin directions. */
-	PORTA.DIR &= ~PIN1_bm;		// Rx as INPUT (default)
-	PORTA.DIR |= PIN0_bm;		// Tx as OUTPUT
+	PORTA_DIR &= ~PIN1_bm;		// Rx as INPUT (default)
+	PORTA_DIR |= PIN0_bm;		// Tx as OUTPUT
 	
 	/* Set baud rate */
-	USART0_BAUD = (uint16_t)USART0_BAUD_RATE(baud);
-
-	/* Enable receiver and transmitter */
-	USART0.CTRLB |= (USART_RXEN_bm | USART_TXEN_bm);
+	USART0_BAUD = (uint16_t)USART_BAUD_RATE(baud);
 
 	/* Set frame format: 8bit Data, No Parity, 1stop bit (8N1) */
 	USART0_CTRLC = USART_CHSIZE_8BIT_gc;	// default
+
+	/* Enable receiver and transmitter */
+	USART0_CTRLB |= (USART_RXEN_bm | USART_TXEN_bm);
 }
 
 /* Blocking call to send one character. */
@@ -71,7 +71,7 @@ void USART0_sendChar(char data)
 	while ( !(USART0_STATUS & USART_DREIF_bm ))	;
 
 	/* Put data into buffer, sends the data */
-	USART0.TXDATAL = data;
+	USART0_TXDATAL = data;
 }
 
 /* Blocking call to receive one character.
@@ -80,10 +80,10 @@ void USART0_sendChar(char data)
 char USART0_recvChar()
 {
 	/* Wait for data to be received */
-	while ( !(USART0.STATUS & USART_RXCIF_bm) )	;
+	while ( !(USART0_STATUS & USART_RXCIF_bm) )	;
 	
 	/* Get and return received data from buffer */
-	return USART0.RXDATAL;
+	return USART0_RXDATAL;
 }
 
 // Check for character in Receive register
@@ -91,7 +91,59 @@ bool USART0_isChar()
 {
 	bool result = false;
 	
-	if( USART0.STATUS & USART_RXCIF_bm ) {
+	if( USART0_STATUS & USART_RXCIF_bm ) {
+		result = true;
+	}
+	
+	return( result );
+}
+
+/* *** USART3 functions *** */
+/* Initialized USART3 registers and IO pins */
+void USART3_init(uint16_t baud)
+{
+	/* Set IO port pin directions. */
+	PORTB_DIR &= ~PIN1_bm;		// Rx as INPUT (default)
+	PORTB_DIR |= PIN0_bm;		// Tx as OUTPUT
+	
+	/* Set baud rate */
+	USART3_BAUD = (uint16_t)USART_BAUD_RATE(baud);
+
+	/* Set frame format: 8bit Data, No Parity, 1stop bit (8N1) */
+	USART3_CTRLC = USART_CHSIZE_8BIT_gc;	// default
+
+	/* Enable receiver and transmitter */
+	USART3_CTRLB |= (USART_RXEN_bm | USART_TXEN_bm);
+}
+
+/* Blocking call to send one character. */
+void USART3_sendChar(char data)
+{
+	/* Wait for empty transmit buffer */
+	while ( !(USART3_STATUS & USART_DREIF_bm ))	;
+
+	/* Put data into buffer, sends the data */
+	USART3_TXDATAL = data;
+}
+
+/* Blocking call to receive one character.
+ * USART3_isChar() should be called and return 'true' before calling this function.
+ */
+char USART3_recvChar()
+{
+	/* Wait for data to be received */
+	while ( !(USART3_STATUS & USART_RXCIF_bm) )	;
+	
+	/* Get and return received data from buffer */
+	return USART3_RXDATAL;
+}
+
+// Check for character in Receive register
+bool USART3_isChar()
+{
+	bool result = false;
+	
+	if( USART3_STATUS & USART_RXCIF_bm ) {
 		result = true;
 	}
 	
