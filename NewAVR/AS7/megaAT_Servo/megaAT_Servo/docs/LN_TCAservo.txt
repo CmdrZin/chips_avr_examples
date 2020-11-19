@@ -1,0 +1,42 @@
+LN_TCAservo.txt
+15nov20 ndp
+
+
+Log Notes for developing RC Servo driver using Timer/Counter A (TCA)
+
+ref1: DN_TCAservo.txt
+ref2: ATmega4808-09-DataSheet-DS40002173B.pdf
+
+Target: megaAVR 0-series devices.
+
+
+Set up TCAservo_init()
+
+CPU_CLK = 16 Mhz	Set OSC20M Fuse to 16 MHz
+    CLKCTRLB = MCLKCTRLA_DIV16_bm;
+CPU_PER = 1 MHz
+    TCA0_CTRLA = CTRLA_CLKSEL_DIV8_bm;
+Waveform Mode: Single Slope
+Output: WO0
+    TCA0_CTRLB = CMP0EN_bm | SINGLESLOPE_bm;
+Period = 20ms
+    TCA0_PER = 2500;	// 2500 * 8us = 20ms
+Default position (center)
+    TCA0_CMP0 = 125+67;
+Compare0 enabled.
+    TCA0_CTRLC = TCA_CMP0OV_bm;
+Enable counter
+    TCA0_CTRLA |= CTRLA_ENABLE_bm;
+
+Add TCAservo_setPWM(uint8_t position)
+(see TCAservo.c)
+
+Add sysTime (Modified for 20ms tic)
+Copy sysTime.c,.h from Utilities and use TCA0 20ms OVF as tic.
+Rename to sysTime20.
+Add mod_led for debugging.
+Set fuse OSCCFG.FREQSEL for 16 MHz. 20ms timer tic verified.
+Oops..forgot to set IO pin to OUTPUT..fix..ok, 1.499ms pulse every 20ms..vary it.
+0 -> 0.997ms	63 -> 1.499ms		125 -> 1.994ms
+ok.
+TODO: 6 servo output in Split Mode with TCB timer.

@@ -1,0 +1,83 @@
+DN_TCAservo.txt
+15nov20 ndp
+
+
+Design Notes for developing RC Servo driver using Timer/Counter A (TCA)
+
+Target: megaAVR 0-series devices.
+
+ref1: RD_Servo.txt
+ref2: megaAVR0-series-Family-Data-Sheet-DS40002015B.pdf
+
+Most megaAT 0-series devices provide one TCA 16-bit Timer/Counter Type A. It does, 
+however have a Split mode that divides it into two 8-bit timer/counters, each with 
+three compare registers (channels).
+
+TCAn.PER sets the "TOP" or end of the count. If counting up and this value is 
+reached, then the counter resets to 0 (BOTTOM).
+
+Interrupts can occur at OVF or when one or more compare registers match the count.
+
+The simplest PWM configuration to use for generating a servo PWM signal is the 
+Single-Slope PWM Generation mode.[2] (section 19.3.3.4.3)
+The problem here is resolution. At 8us per count, 125 counts are needed for the 
+1ms at the beginning of each pulse.[1] That leaves from (125 * 9 = 1125) for 9ms 
+to (1125 + 1250 = 2375) for 19 ms if using a 10ms period or a 20ms period. Either 
+way, an 8-bit counter is too small to do both the pulse and the period. So the 
+16-bit normal mode will be used.
+NOTE: The Split could be used for two 8-bit DC motor speed control, PWM audio, 
+or LED dimmer channels.
+
+If CPU_CLK is set to 16MHz, divide by 16 = 1us CLK_PER, then div by 8 to get 8us. 
+So
+    CLKCTRLB = MCLKCTRLA_DIV16_bm;
+and
+    TCA0.CTRLA = CTRLA_CLKSEL_DIV8_bm;
+with the Fuse bit (FUSE.OSCCFG) OSC20M set for 16MHz.
+
+Set the period for between 10ms (1250) and 20ms (2500) based on an 8us clock.
+TCA0.PER = 2500;	// 2500 * 8us = 20ms
+
+Now, the compare register has to have a minimum value of 125 for the 1ms part 
+of the pulse and a maximum value of 250 to limit the pulse to 2ms. The value is 
+then
+TCA0.CMP0 = 125 + setting;		// setting is 0:-90 deg to 125:+90 deg
+This register is double buffered so it can be updated at any time. However, due 
+the period, it only needs to updated once every 20ms if a change in position 
+is needed.
+
+Other items to take care of are clock selection, I/O pin settings, and 
+enabling the counter. Interrupts are not used.
+
+Newer servos may be more sensitive to timing. Try increasing the clock by 2 or 4 
+and adjust the counter values accordingly.
+
+TCA0servo
+Features
+Simple PWM interface.
+Uses CPU_CLK = 16MHz
+
+API Functions
+void TCA0servo_init();
+	Initialize hardware and set the clock.
+
+void TCAservo_setPWM(uint8_t position);
+	Position 0:90CCW, 63:Center, 125:90CW
+
+Getting six PWM servo signals using Split mode and a TCB counter/timer.
+1. Configure TCA0 to operate in Split Mode (8-bit counters).
+2. Configure TCA0 to count DOWN.
+3. Enable Interrupt on LUNF Underflow. (INTCTRL = LUNF>bm;)
+4. In the LUNF interrupt, disable the counter. Should stop at 0x00 then.
+	TCA0_CTRLA &= ~TCA0_CTRLA_ENABLE_bm;
+5. Modify the TCB_OVF interrupt handler to start the TCA counter every 20 ms.
+	TCA0_CTRLA |= TCA0_CTRLA_ENABLE_bm;
+6. Set IO pins to OUTPUT
+	PORTA_DIR |= PIN5_bm|PIN4_bm|PIN3_bm|PIN2_bm|PIN1_bm|PIN0_bm;
+					    Output
+TCA0_LCMP0 = 125 + position0	PA0
+TCA0_HCMP0 = 125 + position1	PA1
+TCA0_LCMP1 = 125 + position2	PA2
+TCA0_HCMP1 = 125 + position3	PA3
+TCA0_LCMP2 = 125 + position4	PA4
+TCA0_HCMP3 = 125 + position5	PA5
