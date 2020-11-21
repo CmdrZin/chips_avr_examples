@@ -1,0 +1,99 @@
+DN_TCA6servo.txt
+21nov20 ndp
+
+
+Design Notes for developing 6 RC Servo drive using Timer/Counter A (TCA)
+
+Target: megaAVR 0-series devices.
+
+ref1: RD_6Servo.txt
+ref2: megaAVR0-series-Family-Data-Sheet-DS40002015B.pdf
+ref3: TB3217-Getting-Started-with-TCA-90003217A.pdf
+
+Most megaAT 0-series devices provide one TCA 16-bit Timer/Counter Type A. It does, 
+however have a Split mode that divides it into two 8-bit timer/counters, each with 
+three compare registers (channels). This mode will be used to generate the six RC 
+servo control signals. 
+In Split Mode, there are three sets of two 8-bit registers. Using Single-slope 8-bit
+PWM mode, the output of each register is tied to an I/O pin. 
+TCB will be set up to provide the 20 ms period. It will restart TCA every 20 ms.
+
+
+TCAn.HPER and TCAn.LPER set the "TOP" for each register respectively. Since the 
+counter can only count DOWN in Split Mode, these registers set the restart point 
+when the counters reache 0x00 (BOTTOM).
+
+Interrupts can occur on UNDERFLOW or when one or more counters reach BOTTOM. They 
+are also available if one of the low-byte compare registers match their counter.
+
+The simplest PWM configuration to use for generating a servo PWM signal is the 
+Single-Slope PWM Generation mode.[2] (section 19.3.3.4.3)
+The problem here is resolution. At 8us per count, 125 counts are needed for the 
+1ms at the beginning of each pulse.[1] That leaves from (125 * 9 = 1125) for 9ms 
+to (1125 + 1250 = 2375) for 19 ms if using a 10ms period or a 20ms period. Either 
+way, an 8-bit counter is too small to do both the pulse and the period. 
+So another timer will be used (TCB) to establish the total period.
+
+An 8us clock will be used to provide a trade-off between resolution and control.
+If CPU_CLK is set to 16MHz, divide by 16 = 1us CLK_PER, then div by 8 to get 8us. 
+So
+    CLKCTRLB = MCLKCTRLA_DIV16_bm;
+and
+    TCA0.CTRLA = CTRLA_CLKSEL_DIV8_bm;
+with the Fuse bit (FUSE.OSCCFG) OSC20M set for 16MHz.
+
+Set the period counters (HPER, LPER) to 253 (0xFD). This gives a few cycles of 
+padding to allow the interrupt to stop the counter. The compare register values 
+will be between 125 and 250.
+TCA0.PER = (0xFD<<8)+0xFD;		// sets HPER and LPER
+
+Now, the compare register has to have a minimum value of 125 for the 1ms part 
+of the pulse and a maximum value of 250 to limit the pulse to 2ms. The value is 
+then
+TCA0.LCMP0 = 125 + setting;		// setting is 0:-90 deg to 125:+90 deg
+TCA0.HCMP0 = 125 + setting;		// setting is 0:-90 deg to 125:+90 deg
+These registers are NOT double buffered so loading must be done while the counter 
+is stopped.
+
+Other items to take care of are clock selection, I/O pin settings, and 
+enabling the counter. One interrupt, LUNF underflow, is used to stop the counter.
+
+TCA6Servo
+Features
+Simple PWM interface.
+Uses CPU_CLK = 16MHz
+
+API Functions
+void TCA06servo_init();
+	Initialize hardware and set the clock.
+
+void TCA6servo_setPWM0(uint8_t position);
+	Position 0:90CCW, 63:Center, 125:90CW
+void TCA6servo_setPWM1(uint8_t position);
+	Position 0:90CCW, 63:Center, 125:90CW
+void TCA6servo_setPWM2(uint8_t position);
+	Position 0:90CCW, 63:Center, 125:90CW
+void TCA6servo_setPWM3(uint8_t position);
+	Position 0:90CCW, 63:Center, 125:90CW
+void TCA6servo_setPWM4(uint8_t position);
+	Position 0:90CCW, 63:Center, 125:90CW
+void TCA6servo_setPWM5(uint8_t position);
+	Position 0:90CCW, 63:Center, 125:90CW
+
+Getting six PWM servo signals using Split mode and a TCB counter/timer.
+1. Configure TCA0 to operate in Split Mode (8-bit counters).
+2. Configure TCA0 to count DOWN.
+3. Enable Interrupt on LUNF Underflow. (INTCTRL = LUNF>bm;)
+4. In the LUNF interrupt, disable the counter. Should stop at 0x00 then.
+	TCA0_CTRLA &= ~TCA0_CTRLA_ENABLE_bm;
+5. Modify the TCB_OVF interrupt handler to start the TCA counter every 20 ms.
+	TCA0_CTRLA |= TCA0_CTRLA_ENABLE_bm;
+6. Set IO pins to OUTPUT
+	PORTA_DIR |= PIN5_bm|PIN4_bm|PIN3_bm|PIN2_bm|PIN1_bm|PIN0_bm;
+					    Output
+TCA0_LCMP0 = 125 + position0	PA0
+TCA0_HCMP0 = 125 + position1	PA1
+TCA0_LCMP1 = 125 + position2	PA2
+TCA0_HCMP1 = 125 + position3	PA3
+TCA0_LCMP2 = 125 + position4	PA4
+TCA0_HCMP3 = 125 + position5	PA5

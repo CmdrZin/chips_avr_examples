@@ -13,3 +13,4 @@ These are projects that use Atmel Studio 7.
 | -- twiRegSlave | Register File TWI I2C Slave with callback option.|   
 | -- serialPoll | Simplest serial using polling and blocking calls to get and send data.|   
 | megaAT_Servo | Single PWM RC Servo control using TCA.|   
+| megaAT_6Servo_TCA | Six PWM RC Servo controls using TCA Split Mode and TCB3 sysTime.|   

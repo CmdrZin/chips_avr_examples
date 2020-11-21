@@ -1,0 +1,64 @@
+LN_TCAservo.txt
+21nov20 ndp
+
+
+Log Notes for developing a 6 RC Servo driver using Timer/Counter A (TCA)
+
+ref1: DN_TCA6servo.txt
+ref2: ATmega4808-09-DataSheet-DS40002173B.pdf
+
+Target: megaAVR 0-series devices.
+
+
+Set up TCA6servo_init()
+
+CPU_CLK = 16 Mhz	Set OSC20M Fuse to 16 MHz
+    CLKCTRLB = MCLKCTRLA_DIV16_bm;
+CPU_PER = 1 MHz
+    TCA0_CTRLA = CTRLA_CLKSEL_DIV8_bm;
+// This is done in sysTime.c
+
+Mode: Split Mode
+	TCA0_SPLIT_CTRLD = TCA_SPLIT_SPLITM_bm;
+Waveform Mode: Single Slope
+Output: WO0:5
+    TCA0_CTRLB = HCMP2EN_bm|HCMP1EN_bm|HCMP0EN_bm|LCMP2EN_bm|LCMP1EN_bm|LCMP0EN_bm;
+Period = 2.24ms H and L.
+    TCA0_PER = (0xFD<<8)+0xFD;
+Default position (center)
+    TCA0_CMP0 = 125+67;
+Interrupt on underflow LPER enabled.
+    TCA0_INTCTRL = TCA_LUNF_bm;
+Enable counter
+    TCA0_CTRLA |= CTRLA_ENABLE_bm;
+Enable outputs
+    PORTA_DIR = 0x3F;		// PA0:5
+
+Add TCAservo_setPWM0(uint8_t position)
+Add TCAservo_setPWM1(uint8_t position)
+Add TCAservo_setPWM2(uint8_t position)
+Add TCAservo_setPWM3(uint8_t position)
+Add TCAservo_setPWM4(uint8_t position)
+Add TCAservo_setPWM5(uint8_t position)
+
+ISR(TCA0_LUNF_vect)
+{
+	// stop counter
+	// clear interrupt flag.
+}
+(see TCA6servo.c)
+
+Add sysTime (Modified for 20ms tic)
+Copy sysTime.c,.h from Utilities and use TCB0 1ms OVF as tic.
+
+Add mod_led for debugging.
+Set fuse OSCCFG.FREQSEL for 16 MHz. 1ms timer tic verified.
+Test pulse width.
+0:0.997ms		63:1.499ms		125: 1.994ms	ok..
+Add stop and restart to get 20ms period...hmm, TCA0 doesn't always stop..bug..
+fixed..ok. Set LPER,HPER to 0xFF..ok now..
+Last step. Update xCMPn in interrtup when timer is stopped...ok.
+Commit
+
+
+
