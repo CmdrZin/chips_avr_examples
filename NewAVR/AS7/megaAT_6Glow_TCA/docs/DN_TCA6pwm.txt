@@ -1,0 +1,77 @@
+DN_TCA6pwm.txt
+21nov20 ndp
+
+
+Design Notes for developing a 6 channel PWM drive using Timer/Counter A (TCA)
+
+Target: megaAVR 0-series devices.
+
+ref1: RD_6Servo.txt
+ref2: megaAVR0-series-Family-Data-Sheet-DS40002015B.pdf
+ref3: TB3217-Getting-Started-with-TCA-90003217A.pdf
+
+Most megaAT 0-series devices provide one TCA 16-bit Timer/Counter Type A. It does, 
+however have a Split mode that divides it into two 8-bit timer/counters, each with 
+three compare registers (channels). This mode will be used to generate the six PWM 
+control signals. 
+In Split Mode, there are three sets of two 8-bit registers. Using Single-slope 8-bit
+PWM mode, the output of each register is tied to an I/O pin. 
+
+TCAn.HPER and TCAn.LPER set the "TOP" for each register respectively. Since the 
+counter can only count DOWN in Split Mode, these registers set the restart point 
+when the counters reache 0x00 (BOTTOM).
+
+Interrupts are needed for loading the compare registers while the counter is stopped.
+
+The simplest PWM configuration to use for generating a PWM signal is the 
+Single-Slope PWM Generation mode.[2] (section 19.3.3.4.3) In Split mode, one 
+register sets the period and another sets the duty cycle.
+
+An 8us clock will be used to provide a trade-off between resolution and control.
+If CPU_CLK is set to 16MHz, divide by 16 = 1us CLK_PER, then div by 8 to get 8us. 
+So
+    CLKCTRLB = MCLKCTRLA_DIV16_bm;
+and
+    TCA0.CTRLA = CTRLA_CLKSEL_DIV8_bm;
+with the Fuse bit (FUSE.OSCCFG) OSC20M set for 16MHz.
+
+Set the period counters (HPER, LPER) to 255 (0xFF). This gives the maximum 
+period. The compare register values will be between 0 and 255.
+TCA0.PER = 0xFFFF;		// sets HPER and LPER
+
+Now, the compare register have a minimum value of 0 and a maximum value of 255.
+These registers are NOT double buffered so loading must be done while the counter 
+is stopped.
+
+Other items to take care of are clock selection, I/O pin settings, and 
+enabling the counter. One interrupt, LUNF underflow, is used to stop the counter.
+
+TCA6pwm
+Features
+Simple PWM interface.
+Uses CPU_CLK = 16MHz
+
+API Functions
+void TCA_6pwm_init();
+	Initialize hardware and set the clock.
+
+void TCA_setPWM0(uint8_t position);
+void TCA_setPWM1(uint8_t position);
+void TCA_setPWM2(uint8_t position);
+void TCA_setPWM3(uint8_t position);
+void TCA_setPWM4(uint8_t position);
+void TCA_setPWM5(uint8_t position);
+
+Getting six PWM signals using Split mode.
+1. Configure TCA0 to operate in Split Mode (8-bit counters).
+2. Enable LUNF interrupt.
+3. On LUNF, stop timer, update compare registers, restart timer.
+4. Set IO pins to OUTPUT
+	PORTA_DIR |= PIN5_bm|PIN4_bm|PIN3_bm|PIN2_bm|PIN1_bm|PIN0_bm;
+			    Output
+TCA0_LCMP0 = duty0	PA0
+TCA0_HCMP0 = duty1	PA1
+TCA0_LCMP1 = duty2	PA2
+TCA0_HCMP1 = duty3	PA3
+TCA0_LCMP2 = duty4	PA4
+TCA0_HCMP3 = duty5	PA5

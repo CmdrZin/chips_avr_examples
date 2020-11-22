@@ -1,0 +1,46 @@
+LN_TCA6pwm.txt
+21nov20 ndp
+
+
+Log Notes for developing a 6 PWM sigjnal generator using Timer/Counter A (TCA)
+
+ref1: DN_TCA6pwm.txt
+ref2: ATmega4808-09-DataSheet-DS40002173B.pdf
+
+Target: megaAVR 0-series devices.
+
+Copy megaAT_6Servo project files and trim down to just generate simple PWM signals.
+
+Set up TCA6_pwm_init()
+
+CPU_CLK = 16 Mhz	Set OSC20M Fuse to 16 MHz
+    CLKCTRLB = MCLKCTRLA_DIV16_bm;
+CPU_PER = 1 MHz
+    TCA0_CTRLA = CTRLA_CLKSEL_DIV8_bm;
+// This is done in sysTime.c
+
+Mode: Split Mode
+	TCA0_SPLIT_CTRLD = TCA_SPLIT_SPLITM_bm;
+Waveform Mode: Single Slope
+Output: WO0:5
+    TCA0_CTRLB = HCMP2EN_bm|HCMP1EN_bm|HCMP0EN_bm|LCMP2EN_bm|LCMP1EN_bm|LCMP0EN_bm;
+Period = 2.48ms H and L.
+    TCA0_PER = 0xFFFF;
+Default positions (middle)
+    TCA0_LCMP0 = 128;
+    TCA0_LCMP1 = 128;
+    TCA0_LCMP2 = 128;
+    TCA0_HCMP0 = 128;
+    TCA0_HCMP1 = 128;
+    TCA0_HCMP2 = 128;
+// Enable interrupt on underflow LUNF
+    TCA0_SPLIT_INTCTRL = TCA_SPLIT_LUNF_bm;
+Enable counter
+    TCA0_CTRLA |= CTRLA_ENABLE_bm;
+Enable outputs
+    PORTA_DIR = 0x3F;		// PA0:5
+
+// Use table of dutys[]
+Add TCA_setPWM(uint8_ channel uint8_t duty)
+(see TCA6pwm.c)
+

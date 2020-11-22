@@ -1,0 +1,28 @@
+RD_TCA6pwm.txt
+21nov20 ndp
+
+
+Reference Design Notes for a 6 PWM signal gererator using TCA in Split Mode
+
+Target: megaAVR 0-series devices.
+
+General requirements for a PWM signal generator.
+
+Select a Period: 2.48 ms. This is the time it takes an 8-bit counter will overflow.
+
+Resolution: 8 us. 
+
+Pulse width can vary from 0.008ms (0) to 2.4 ms (255)
+    _                                 _
+   | |                               | |
+---   -------------------------------   --
+		minimum duty cycle
+___   _______________________________   __
+   | |                               | |
+    -                                 -
+		maximum duty cycle
+
+Most PWM systems start with the output pin HIGH and use a compare register to set 
+it back LOW.
+
+This project is a trimmed down version of the megaAT_6Servo_TCA.
