@@ -36,3 +36,4 @@ These are projects that use the chip_avr_asm_lib and 'C' modules.
 |Handles| Processing3 GUI Slider Class based on handles example code.|  
 |Motor Slave| Four channel DC motor control with quad encoder and limit switch inputs.|  
 |NewAVR| Example code for the ATmega4808/4809 next generation of AVR devices using both Atmel Studio 7 and MPLAB X IDEs.|  
+|AVRFlashDataTutorial| Examples and discussion for accessing data in FLASH.|  
