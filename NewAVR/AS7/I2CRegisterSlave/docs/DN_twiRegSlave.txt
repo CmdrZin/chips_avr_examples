@@ -1,0 +1,54 @@
+DN_twiRegSlave.txt
+11/10/2020 ndp
+
+
+Design Notes for TWI Register Slave I2C driver
+
+Target: megaAVR 0-series devices.
+
+
+This I2C interface uses a Register File system instead of a FIFO so that it more 
+closely matches the operation of I2C slave hardware devices.
+
+First byte after SDA_W is the register index for writing or reading.
+Successive reads increment the tx register index.
+Multiple byte writes increment the rx register index on each byte after the first.
+
+
+Features
+User defined register file size.
+Seven bit addressing.
+Build-time callback table for writes to Register File.
+
+Future Options
+Global address detetion (addres 0x00).
+Ten bit addressing.
+App Note: How to link in peripherals to the Register File.
+App Note: Custumization. Adding change detection flags for incoming data.
+
+API Functions
+void twiRegSlaveInit(uint8_t adrs,
+				uint8_t* rxRegFile, uint8_t rxRegFileSize,
+				uint8_t* txRegFile, uint8_t txRegFileSize);
+	Set the Slave address to adrs.
+	Set the rx & tx Register File buffer start points.
+	Set the size of the rx & tx Register Files.
+
+uint8_t* twiGetRegisterFilePtr();
+	Return a pointer to the RegisterFile[0].
+
+void twiSetRegister(uint8_t index, uint8_t val);
+	Set RegisterFile[index] to val.
+
+uint8_t twiGetRegister(uint8_t index);
+	Return value from RegisterFile[index];
+
+rfCallbackTable (FLASH)
+	This is a table of function pointers indexed by the Register File index.
+	If the function pointer is not NULL, the functions is called when ever the 
+	Register File indexed location is written to.
+	To minimze processing time within the interrupt handler, these functions 
+	normally just set a flag to tell the main system that the associated Register 
+	File value has changed.
+	NOTE: This feature can be disabled.
+

@@ -1,0 +1,63 @@
+DN_TCBservo.txt
+16nov20 ndp
+
+
+Design Notes for developing RC Servo driver using Timer/Counter B (TCB)
+
+Target: megaAVR 0-series devices.
+
+ref1: RD_Servo.txt
+ref2: megaAVR0-series-Family-Data-Sheet-DS40002015B.pdf
+
+Most megaAT 0-series devices provide three to four TCB 16-bit Timer/Counter Type B. 
+It also has a Split mode that divides it into two 8-bit timer/counters, each with 
+three compare registers (channels).
+
+TCBn.CCMP sets the "TOP" or end of the count. If counting up and this value is 
+reached, then the counter resets to 0 (BOTTOM).
+
+The only PWM configuration available, that does not use the Event system, is the 
+8-bit PWM Mode.[2] (section 21.3.3.1.8) This mode uses half of the 16-bit Compare 
+register to set the duty cyctle (TCBn.CCMPH) and half to set the period 
+(TCBn.CCMPL). If the figure 21-10 is correct, part of the text is wrong.
+
+The problem here is resolution. At 8us per count, 125 counts are needed for the 
+1ms at the beginning of each pulse.[1] That leaves from (125 * 9 = 1125) for 9ms 
+to (1125 + 1250 = 2375) for 19 ms if using a 10ms period or a 20ms period. Either 
+way, an 8-bit counter is too small to do both the pulse and the period.
+A work around is to stop the 8-bit counter at the end of the pulse and the use 
+another timer to restart the 8-bit counter every 20 ms.
+
+If CPU_CLK is set to 16MHz, divide by 64 = 1us CLK_PER, then div by 2 to get 8us. 
+So
+    CLKCTRLB = MCLKCTRLA_DIV64_bm;
+and
+    TCB0.CTRLA = CTRLA_CLKSEL_CLKDIV2_bm;
+with the Fuse bit (FUSE.OSCCFG) OSC20M set for 16MHz.
+
+Hack the the normal sysTime to Start TCB0 every 20 ms. Also adjust it's timing to 
+use a 16 MHz clock instead of 20 MHz.
+TCA0.PER = 16000-1;
+
+Now, the compare register has to have a minimum value of 125 for the 1ms part 
+of the pulse and a maximum value of 250 to limit the pulse to 2ms. The value is 
+then
+TCB0.CCMPH = 125 + setting;		// setting is 0:-90 deg to 125:+90 deg
+It only needs to updated once every 20ms if a change in position is needed.
+
+Other items to take care of are clock selection, I/O pin settings, and 
+enabling the counter. Interrupts are not used.
+
+TCB0servo
+Features
+Simple PWM interface.
+Uses CPU_CLK = 16MHz
+
+API Functions
+void TCB0servo_init();
+	Initialize hardware and set the clock.
+
+void TCB0servo_setPWM(uint8_t position);
+	Position 0:90CCW, 67:Center, 125:90CW
+(repeat for TCB1, TCB2, etc.)
+

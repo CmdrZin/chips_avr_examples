@@ -15,3 +15,7 @@ These are projects that use Atmel Studio 7.
 | megaAT_Servo | Single PWM RC Servo control using TCA.|   
 | megaAT_6Servo_TCA | Six PWM RC Servo controls using TCA Split Mode and TCB3 sysTime.|   
 | megaAT_6Glow_TCA | Six PWM signals using TCA Split Mode to cause LEDs to glow.|   
+| I2CRegisterSlave | Demo code from Utilities section.|   
+| -- WithCallBackWoParam | Demo with Callback enabled using functions without parameters.|   
+| -- WithCallBackWParam | Demo with Callback enabled using functions passing one parameter.|   
+

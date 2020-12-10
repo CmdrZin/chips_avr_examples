@@ -1,0 +1,41 @@
+RD_Servo.txt
+15nov20 ndp
+16nov20
+
+Reference Design Notes for RC Servo drivers
+
+Target: megaAVR 0-series devices.
+
+General requirements for a RC servo driver.
+
+
+Duty cycle from 10 ms (10 kHz) to 20 ms (5 kHz).
+
+Resolution <= 8 us.
+Most servos do not respond to timing differences of less than 8 us.
+
+Pulse width from 1ms (full CCW) to 2 ms (full CW) with 1.5 ms center.
+
+    _______                                 ___
+   |       |                               |
+---         -------------------------------
+   <-1 ms-->
+    ______________                          ___
+   |              |                        |
+---                ------------------------
+   <-----2 ms----->
+
+   <----------------- 20 ms -------------->
+
+Most PWM systems start with the output pin HIGH and use a compare register to set 
+it back LOW. This method waists usually half of the compare registers range to 
+generate the constant 1ms delay at the beginning of the cycle.
+
+Ideally, a fixed 1ms delay + position delay would allow for the maximum 
+resolution of the position delay.
+This requires a two stage approach.
+
+Another option is to stop the 8-bit counter at the end of the pulse delay and use 
+a different counter to restart it after the 20ms period.
+
+1ms / 8us = 125 to divide up 180 degrees of travel.
