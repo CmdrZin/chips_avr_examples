@@ -1,0 +1,46 @@
+DN_twiMaster.txt
+09dec2020 ndp
+12dec20
+
+Design Notes for TWI Master I2C driver
+
+Target: megaAVR 0-series devices.
+
+
+This I2C interface uses buffers maintained by the caller.
+
+Write to Slave protocol is SDA_W Data0 ... DataN STOP
+Read from Slave protocol is SDA_R Data0 ... DataN (Master NAK) STOP
+
+Features
+Buffer interface.
+Seven bit addressing.
+
+Future Options
+Fast Mode: 400kHz
+Fast Mode Plus: 1 MHz
+Global address generation (addres 0x00).
+Ten bit addressing.
+Multi-Master arbitration.
+App Note: How to read a peripherals with a Register File.
+
+API Functions
+void twiInit();
+
+bool twiWrite(uint8_t adrs, uint8_t* buffer, uint8_t nbytes);
+	send nbytes from buffer[] to Slave adrs.
+	return false on failure or if busy.
+
+bool twiIsBusy();
+	return false if not, else true.
+
+bool twiRead(uint8_t adrs, uint8_t* buffer, uint8_t nbytes);
+	read nbytes from Slave adrs into buffer[].
+
+To Demo
+Connect Ardunit SCL, SDA, and Ground to Curiosity PA3, PA2, GND respectively.
+Connect USB to Arduino and run Ardunio_I2C_Slave and open Serial Monitor(9600 8N1).
+Connect USB to Curiosity.
+May have to reset Arduino.
+"hello " will display in Serial Monitor. Any other 6 charater message can be use 
+for loop-back. The Master reads and writes 6 charaters (hard coded).

@@ -20,15 +20,18 @@
 
 #include <Wire.h>
 
+int count = 0;
+
 void setup() {
   Wire.begin(8);                // join i2c bus with address #8
   Wire.onRequest(requestEvent); // register event
   Wire.onReceive(receiveEvent); // register event
   Serial.begin(9600);           // start serial for output
+  Serial.print("Start/n");
 }
 
 void loop() {
-  delay(100);
+  delay(10);
 }
 
 // function that executes whenever data is requested by master
@@ -47,6 +50,12 @@ void receiveEvent(int howMany)
     char c = Wire.read(); // receive byte as a character
     Serial.print(c);         // print the character
   }
-  int x = Wire.read();    // receive byte as an integer
-  Serial.println(x);         // print the integer
+  char c = Wire.read();    // receive byte as an integer
+  if(++count > 20) {
+    count = 0;
+    Serial.println(c);         // print the character
+  } else {
+    Serial.print(c);           // print the character
+    Serial.print(' ');         // print SPACE
+  }
 }

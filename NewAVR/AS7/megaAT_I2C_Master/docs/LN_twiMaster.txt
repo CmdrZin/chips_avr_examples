@@ -1,0 +1,126 @@
+LN_twiMaster.txt
+09dec2020 ndp
+12dec20
+
+Log Notes for developing a TWI Master I2C driver
+
+ref1: DN_twiMaster.txt
+ref2: megaAVR0-series-Family-Data-Sheet-DS40002015B.pdf
+ref3: ATmega4808-09-DataSheet-DS40002173B.pdf
+
+Target: megaAVR 0-series devices.
+
+This I2C interface uses buffers.
+
+Use state machine as with other TWI drivers.
+Section 25. TWI - Two-Wire Interface.[2]
+
+
+Set up SDASETUP & SDAHOLD first. CTRLA.
+Set up TWI0.BAUD before enabling Master.
+
+To start TWI Master, write TWIn.MCTRLA.ENABLE = 1, No TIMEOUT. Set to IDLE with 
+TWI0.MSTATUS.BUSSTATE = 0x1. (see also 25.3.1)[2]
+Master Write: If Slave NACK on data, STOP transsfer.
+Master Read: Set NACK to tell Slave to Stop transfer then issue STOP.
+Bus State: Start det, Stop det, time-out, bit counter. TWI0:MSTATUS.BUSSTATE
+0x00: Unknown, 0x01: Idle, 0x10: Own Bus, 0x11: Busy (see Fig 25-12)[2]
+Separate ISR for Maset Read and Master Write. (25.3.4.2)[2]
+Also status flags for ACK/NACK, buss error, arb lost, clock hold, and bus state.
+SCL forced LOW when an interrupt flag is set.
+M4:
+  Adrs+R/W	 w/BUSY	- -> BUSY until BUSSTATE=IDLE
+  Adrs+R/W	 w/ACK	- -> tx data until NACK or done or BUSY
+  Adrs+/W	 w/NACK	- Repeat Start
+  Adrs+R	 w/ACK	- rx data until NACK on done
+Clock: fSCL = fCLK_PER / (10 + 2*BAUD)	fCLK_PER = 1us
+Master starts with START when address written into Master Address reg. Adr+R/W bit
+M1: Arb lost. TWI0.STATUS = WIF and ARBLOST set. Wait for BUSSTATE = IDLE.
+	BUSERR may also be set.
+M2: Adrs sent. No Slave ACKed. TWI0.STATUS = WIF and RXACK(NACK) are set. Clock 
+hold active. HOW TO RELEASE? When interrupt flag is cleared.
+M3: Adrs sent for Write. Slave ACK. TWI0.STATUS = WIF set and RXACK cleared. Clock 
+hold active. HOW TO RELEASE? When interrupt flag is cleared.
+M4: Adrs sent for Read. Slave ACK. TWI0.STATUS = RIF set and RXACK cleared. Clock 
+hold active. HOW TO RELEASE? When interrupt flag is cleared.
+So, WIF handles no Slave (SDA+W and SDA+R NACK) and SDA+W ACK. RIF handles SDA_R ACK.
+Only ONE ISR (TWI0_TWIM_vect), but two interrupt flags.
+
+25.3.4.2.3[2]
+Tx Data: starts by writing to TWI0.MDATA, which clears the WIF flag. WIF set on 
+completion. ARBLOST and/or BUSERR can also be set if problems.
+RXACK only valid if WIF is set. RXACK=0 is Slave ACKed data (ready for more).
+RXACK=1(NACK) if Slave can't receive more data. Restart or issue 
+TWI0.MCTRLB=MCMD_STOP command.
+
+25.3.4.2.4[2]
+Rx Data: ACK each byte or NACK last byte needed. Check for ARBLOST and/or BUSERR.
+
+No Quick Command Mode
+
+TWI0.MSTATUS has status flags.
+
+CTRLA:	SDAHOLD[1:0] = 0x3	Default: 4CYC, Fm-disabled.
+DUALCTRL:	default.
+DBGCTRL:	default.
+
+MCTRLA:	RIEN=1 WIEN=1 TIMEOUT[1:0]=3 SMEN=1, ENABLE=1
+	Read intr, Write intr, TimeOut 200us, Smart mode, TWI Enabled.
+MCTRLB:
+	Initialize: FLUSH=1 to clear Master state, MADDR and MDATA.
+	Set ACKACT=1 to NACK last byte of message sent by Slave.
+Set for response to next action
+	MCMD[1:0] = 0 no action
+	MCMD[1:0] = 2 byte read ACK or byte sent.
+	MCMD[1:0] = 3 STOP after next byte sent or received.
+MSTATUS
+	RIF=1		successful data read or successful SDA_R sent.
+	WIF=1		successful write of adrs or data.
+	CLKHOLD=1	in clock stretch mode. Cleared by write to MADDR, MDATA, read DATA.
+	RXACK		last Slave response ACK(0)/NACK(1)
+	ARBLOST=1	Arbitration lost. Error. Clear as CLKHOLD methods.
+	BUSERR=1	Bus Error.  Clear as CLKHOLD methods.
+	BUSSTATE	0:Unknown, 1:IDLE, 2:OWNER of Bus, 3:BUSY
+MBAUD: written when TWI0.MCTRLA.ENABLE = 0. try 0x05 for 100kHz @ 1MHz PRECLK.
+MADDR: Write Slave adrs here. Triggers START. Bus should be IDLE. bit0 is R/W bit.
+MDATA: Read uses up ACAKACT bit. Write to send data, clears RIF and WIF flags.
+
+Successive writes increment the tx register index.
+Successive reads increment the rx register index.
+
+Reset txHead on twiWrite()
+Reeet rxHead and rxTail on twiRead()
+Inc rxTail on twiReadData()
+
+Fire up Arduino_I2C_Slave.
+DOH, force BUSSTATE to IDLE on Reset. Much better..Adjust timing to 100 kHz..ok.
+Writes but dosen't recover from a disconnect.
+Try forcing into IDLE after Error. Move force IDLE to ERROR group at default.
+Clear errors with MADDR and MDATA writes..woo hoo..recovers from SCL or SDA loss.
+Blah..try resetting flags on write if errors set..ok.recovers from SCL or SDA loss.
+try adding STOP to error state..stuck in BUSY..Reenable TimeOut to exit BUSY.
+ok..recovers.. Arduino com port gets messed up sometimes, but Master still send out 
+SDA_W to connect. Note: Arduino can be set to support Write and Read at the same time.
+TODO: SDA_R and reading data.
+11dec20
+try twiRead()..not bad. ACKs SDA_R and gets the first byte, but NACKs it..no hang up 
+though. Set MCTRLB to ACK and MCMD to RECVTRANS (ACK) unless only 1 byte expected, 
+then use MCMD = STOP. Hmm, no interrupt on SDA_R success. So assumed because WIF 
+did not get set on NACK of SDA_R. hmm..one byte ACK then zip..try read 1 byte, 
+should get a NACK..got NACK, but no STOP..try just STOP..reads continously. bytes 
+are correct..ah, fix logic bug..reads only one..try 6 again..woo hoo..Read works.
+MOD main() to do a loop back test..doh, forgot to check isBusy..hmm, never enters 
+TWI_MRX_DATA_NACK due to STOP action. Set busy=false in flag logic section..
+SCL held LOW after last byte..try just STOP on last byte..nope, reads don't stop 
+then..hmm,,try Enable in init() and not in Write or Read..better..try writing to 
+MCTRLB each byte received..better..while(busy); block working now..clock held LOW.
+Move Read to after MCTRLB..NACK logic seems ok, move read ACK above MCTRLB..take out
+toggle(4)..almost. try Bytes-2..ok..try loop back again..BUG: not setting rxBuffer..
+doh, fix..loopback working with hack to avoid overwrites that isBusy() would stop.
+need to verify Write isBusy 
+12dec20
+use LED to monito isBusy..clear after TWI_MTX_DATA_ACK -> last byte -> STOP.
+clean up..change main to use while(twiIsBusy());..ok..Read..Write..delay..all good.
+Recovers from loss of SCL or SDA..Arduino reset..Master power loss requirse an 
+Arduino Slave reset..done.
+
