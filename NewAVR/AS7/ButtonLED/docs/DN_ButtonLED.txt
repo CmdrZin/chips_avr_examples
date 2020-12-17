@@ -1,0 +1,111 @@
+DN_ButtonLED.txt
+16dec20 ndp
+
+
+Design Notes for Button and LED project.
+
+
+The project uses the ATmega4809 Curiosity Nano Evaluation kit to demonstrate a 
+simple project framework. It uses the following support files:
+   sysTime     - timer function to provide millis().
+   mod_led     - general LED control.
+I include these in just about every project I make.
+
+The demo monitors the on-board button and flashes the on-board LED twice when the 
+button is pushed.
+If the button is held down, the LED flashes three times two seconds after the 
+initial double flash.
+
+Setup Timer.
+Setup LED IO.
+Setup button IO.
+
+Set Enable Blink2 false
+Set Enable Blink3 false
+
+Using IF statements:
+Loop
+  if Trigger Blink2, service Blink2.
+  if Trigger Blink3, service Blink3.
+  Every 10ms, check button state.
+    if (button DOWN and flag), inc count.
+    else if button DOWN, set flag and set count=0 and Enable blink2.
+    if button UP and count > 3, clear flag.
+    if button DOWN and flag and count > 2000, Enable blink3.
+endLoop
+
+Using a State Machine:
+set state = IDLE
+Loop
+  Every 10ms, check button state. Will be either UP or DOWN.
+  call stateMachine( buttonState )
+endLoop
+
+stateMachine( bool buttonState )
+  switch(state)
+    IDLE: if buttonState is DOWN,
+            state = BUTTON_DOWN_1
+            set flag
+            count = 0
+            enable Blink2 
+          else state = IDLE.
+
+    BUTTON_DOWN_1:
+          if buttonState is DOWN,
+            if flag, increment count.
+              if count > 200, enable Blink3.
+          else  // button is UP
+            clear flag, clear counter, state = BUTTON_UP_1
+
+    // Wait for button to be released for 30ms.
+    BUTTON_UP_1:
+          if buttonState is DOWN,      // due to switch bounce.
+            clear counter,
+            state = BUTTON_UP_1
+          else  // button is UP
+            increment counter.
+          if counter > 3,
+            state = IDLE.
+ 
+Blink2
+  static bool active = false
+  static count
+
+  if lastTimeB2 < millis()
+    set lastTimeB2 = millis() + DELAY_100ms;
+    if not active
+      // Just enabled.
+      set active true.
+      count = 0
+      turn LED ON.
+    else
+      increment count.
+      if count % 2 == 1 
+        turn LED OFF.
+      else
+        turn LED ON.
+      if count > 2
+        clear active
+        clear Enable Blink2
+
+Blink3
+  static bool active = false
+  static count
+
+  if lastTimeB3 < millis()
+    set lastTimeB3 = millis() + DELAY_100ms;
+    if not active
+      // Just enabled.
+      set active true.
+      count = 0
+      turn LED ON.
+    else
+      increment count.
+      if count % 2 == 1 
+        turn LED OFF.
+      else
+        turn LED ON.
+      if count > 4
+        clear active
+        clear Enable Blink3
+  
