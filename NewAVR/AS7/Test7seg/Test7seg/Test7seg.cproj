@@ -12,9 +12,9 @@
     <OutputFileName>$(MSBuildProjectName)</OutputFileName>
     <OutputFileExtension>.elf</OutputFileExtension>
     <OutputDirectory>$(MSBuildProjectDirectory)\$(Configuration)</OutputDirectory>
-    <AssemblyName>ButtonLED</AssemblyName>
-    <Name>ButtonLED</Name>
-    <RootNamespace>ButtonLED</RootNamespace>
+    <AssemblyName>Test7seg</AssemblyName>
+    <Name>Test7seg</Name>
+    <RootNamespace>Test7seg</RootNamespace>
     <ToolchainFlavour>Native</ToolchainFlavour>
     <KeepTimersRunning>true</KeepTimersRunning>
     <OverrideVtor>false</OverrideVtor>
@@ -28,15 +28,14 @@
     <ResetRule>0</ResetRule>
     <eraseonlaunchrule>0</eraseonlaunchrule>
     <EraseKey />
-    <avrtool>com.atmel.avrdbg.tool.simulator</avrtool>
-    <avrtoolserialnumber>
-    </avrtoolserialnumber>
+    <avrtool>com.atmel.avrdbg.tool.nedbg</avrtool>
+    <avrtoolserialnumber>MCHP3094081800004650</avrtoolserialnumber>
     <avrdeviceexpectedsignature>0x1E9651</avrdeviceexpectedsignature>
     <avrtoolinterface>UPDI</avrtoolinterface>
     <com_atmel_avrdbg_tool_nedbg>
       <ToolOptions>
         <InterfaceProperties>
-          <UpdiClock>0</UpdiClock>
+          <UpdiClock>750000</UpdiClock>
         </InterfaceProperties>
         <InterfaceName>UPDI</InterfaceName>
       </ToolOptions>
@@ -44,18 +43,7 @@
       <ToolNumber>MCHP3094081800004650</ToolNumber>
       <ToolName>nEDBG</ToolName>
     </com_atmel_avrdbg_tool_nedbg>
-    <avrtoolinterfaceclock>0</avrtoolinterfaceclock>
-    <com_atmel_avrdbg_tool_simulator>
-      <ToolOptions xmlns="">
-        <InterfaceProperties>
-        </InterfaceProperties>
-        <InterfaceName>UPDI</InterfaceName>
-      </ToolOptions>
-      <ToolType xmlns="">com.atmel.avrdbg.tool.simulator</ToolType>
-      <ToolNumber xmlns="">
-      </ToolNumber>
-      <ToolName xmlns="">Simulator</ToolName>
-    </com_atmel_avrdbg_tool_simulator>
+    <avrtoolinterfaceclock>750000</avrtoolinterfaceclock>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <ToolchainSettings>
@@ -145,10 +133,22 @@
     <Compile Include="mod_led.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="single7seg.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="single7seg.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="sysTime.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="sysTime.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="twiMaster.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="twiMaster.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>
