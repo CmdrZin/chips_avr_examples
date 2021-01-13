@@ -15,6 +15,7 @@ These are projects that use the chip_avr_asm_lib and 'C' modules.
 |Example AVR C Code | General examples of hardware drivers in C code.|
 |GlowEyesType1| Simple glowing LEDs for ATtiny85.|  
 |GlowEyesType2| Simple glowing LEDs for WS2812B.|  
+|HC_SR04 Tutorial| Tutorial on how to use a HC_SR04 ultrasonic sensor.|  
 |I2C_Master_Code_Dev | Demo board code used to develop I2C code.|   
 |I2C_Slave_Code_Dev/I2C_Logger | Slave code Logger example.|   
 |I2C_Slave_Code_Dev/I2C_SlaveCore | Slave Core code example with Arduino Master.|
