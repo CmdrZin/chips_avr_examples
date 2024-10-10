@@ -14,3 +14,5 @@ These are projects that use MPLAB X for ATtiny AVR Series-1 devices.
 | ITMC_III_1.X.zip | Serial port setup.|   
 | ITMC_III_2.X.zip | ADC setup.|   
 | ITMC_III_5.X.zip | I2C Slave setup.|   
+| ITMC_III_6a.X.zip | SPI Host setup.|   
+| ITMC_III_12.X.zip | EEPROM Access setup.|   
