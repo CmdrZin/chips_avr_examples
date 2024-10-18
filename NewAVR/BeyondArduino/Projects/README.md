@@ -15,5 +15,6 @@ These are projects that use MPLAB X for ATtiny AVR Series-1 devices.
 | ITMC_III_2.X.zip | ADC setup.|   
 | ITMC_III_5.X.zip | I2C Slave setup.|   
 | ITMC_III_6a.X.zip | SPI Host setup.|   
-| ITMC_III_8_RTC.X.zip | RTC setup.|   
+| ITMC_III_8_RTC.X.zip | Real Time Clock (RTC) setup.|   
+| ITMC_III_9_CCL.X.zip | Configurable Custom Logic (CCL) setup.|   
 | ITMC_III_12.X.zip | EEPROM Access setup.|   
