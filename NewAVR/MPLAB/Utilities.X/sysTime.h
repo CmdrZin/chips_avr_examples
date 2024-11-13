@@ -34,7 +34,7 @@
 #include <stdbool.h>
 
 void init_time();
-uint32_t st_millis();
+uint32_t millis();
 bool is10msFlagSet( uint8_t flag );
 
 #endif /* SYSTIME_H_ */

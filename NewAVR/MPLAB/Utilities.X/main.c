@@ -69,7 +69,7 @@ int main(void)
 	
 	// Start up Blink 3 times.
 	while(loopCount < 7) {
-		if( st_millis() > ledTime ) {
+		if( millis() > ledTime ) {
 			ledTime += LED_DELAY;
 			if(loopCount % 2) {
 				mod_led_on();
@@ -85,14 +85,14 @@ int main(void)
 	{
 #if 1
 		// Check every ms
-		if( st_millis() > ledTime ) {
+		if( millis() > ledTime ) {
 			ledTime += LED_DELAY;
 			mod_led_toggle(250);
 		}
 #endif
 #if 0
 		// Demo TWI I2C
-		if( st_millis() > twiTime ) {
+		if( millis() > twiTime ) {
 			twiTime += TWI_DELAY;
 			// TODO: Replace this with ADC read of temperature.
 			twiSetRegister(1, loopCount>>8);
@@ -107,7 +107,7 @@ int main(void)
 #endif
 #if 0
 		// Demo USART0
-		if( st_millis() > usartTime ) {
+		if( millis() > usartTime ) {
 			usartTime += USART_DELAY;
 			// Send a 'tic' character.
 			USART0_sendChar('*');
@@ -119,7 +119,7 @@ int main(void)
 #endif
 #if 1
 		// Demo USART3
-		if( st_millis() > usartTime ) {
+		if( millis() > usartTime ) {
 			usartTime += USART_DELAY;
 			// Send a 'tic' character.
 			USART3_sendChar('*');

@@ -3,10 +3,9 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Data/EmbeddedSystems/NewAVR/MPLAB/Utilities.X/main.c</file>
-            <file>file:/C:/Data/EmbeddedSystems/NewAVR/MPLAB/Utilities.X/serialPoll.c</file>
-            <file>file:/C:/Data/EmbeddedSystems/NewAVR/MPLAB/Utilities.X/twiRegSlave.c</file>
-            <file>file:/C:/Data/EmbeddedSystems/NewAVR/MPLAB/Utilities.X/sysTime.c</file>
+            <file>file:/C:/Users/Cmdrzin/Documents/GitHub/chips_avr_examples/NewAVR/MPLAB/Utilities.X/sysTime.h</file>
+            <file>file:/C:/Users/Cmdrzin/Documents/GitHub/chips_avr_examples/NewAVR/MPLAB/Utilities.X/sysTime.c</file>
+            <file>file:/C:/Users/Cmdrzin/Documents/GitHub/chips_avr_examples/NewAVR/MPLAB/Utilities.X/main.c</file>
         </group>
     </open-files>
 </project-private>

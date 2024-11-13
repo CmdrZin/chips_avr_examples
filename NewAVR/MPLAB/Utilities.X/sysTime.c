@@ -95,15 +95,19 @@ void init_time()
 }
 
 /* Return the total number of milliseconds since the project started. */
-uint32_t st_millis()
+uint32_t millis(void)
 {
-	uint32_t temp;				// make a holder for the counter.
+    uint32_t temp;			// make a holder for the counter.
+    uint8_t sreg_save;
+    
+    // Save SREG, disable interrupts, do code, restore SREG.
+    // If interrupts were enabled, they will be re-enabled.
+    sreg_save = SREG;
+    cli();
+    temp = totalMilliseconds;	// get a copy while interrupts are disabled.
+    SREG = sreg_save;
 
-	cli();						// Turn OFF interrupts to avoid corruption during a multi-byte read.
-	temp = totalMilliseconds;	// get a copy while interrupts are disabled.
-	sei();						// Turn interrupts back ON.
-
-	return temp;				// return a 'clean' copy of the counter.
+	return temp;			// return a 'clean' copy of the counter.
 }
 
 /* flag 0:7 */
