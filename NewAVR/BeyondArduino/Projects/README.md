@@ -1,4 +1,4 @@
-BeyondArduino Project files
+Beyond Arduino Project files
 ==================
 
 These are projects that use MPLAB X for ATtiny AVR Series-1 devices.  
@@ -17,4 +17,6 @@ These are projects that use MPLAB X for ATtiny AVR Series-1 devices.
 | ITMC_III_6a.X.zip | SPI Host setup.|   
 | ITMC_III_8_RTC.X.zip | Real Time Clock (RTC) setup.|   
 | ITMC_III_9_CCL.X.zip | Configurable Custom Logic (CCL) setup.|   
+| ITMC_III_10_AC.X.zip | Analog Comparator setup.|   
 | ITMC_III_12.X.zip | EEPROM Access setup.|   
+| ITMC_IV_1_LEDS.X.zip | 20 LEDs controlled by 5 lines setup.|   
