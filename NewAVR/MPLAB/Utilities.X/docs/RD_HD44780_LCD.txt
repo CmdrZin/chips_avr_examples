@@ -1,0 +1,120 @@
+RD_HD44780_LCD.txt
+26mar25 ndp
+27mar25
+
+Reference Design Notes for a HD44780 LCD driver. Display is a 2z24 line LCD.
+
+ref1: HD44780_LCD_Ctrl.pdf - HD44780 data sheet.
+
+Target: ATtiny AVR SIOC-14 devices (ATtiny814, ATtiny1614, etc.) using the 4-bit data interface.
+
+Files: lcd_hd44780.c, lcd_hd44780.h
+
+Normally, the HD44780 controller (HDC) is used as a register address based device in that you write a value into the address register and 
+the next data write sends the data to that address and normally increments the address register. Therefore, successive 
+writes will go to successive address locations. The read operation works the same way. Write the starting address and 
+then read from it and successive addresses.
+
+The interface has two 8-bit registers, an instruction register (IR) and a data register (DR).
+The IR stores instruction codes and address information for display RAM (DDRAM) and character generator RAM (CGRAM). This register is 
+write-only.
+The DR stores data going to or coming from the RAM sections.
+
+A BUSY flag is available on line DB7 when RS = 0 and R/W = 1. BUSY = 1 indicates that the device will NOT accept a command. For a faster 
+interface, this bit can be checked rather than using a minimum delay given in the timing diagrams.
+
+The RS and R/W line control the interface operations[1] Table 1, page 9
+
+RS	R/W	Operation
+0	0	Command
+0	1	Read BUSY flag
+1	0	DR write
+1	1	DR read
+
+The target display is a 2-line 24 character display, therefor configuration bit N=1.
+For the DDRAM area:
+	The starting address for line 1 is 0x00 and ends at 0x17. The last location in memory is 0x27. Locations 0x18:0x27 are not displayed.
+	The starting address for line 1 is 0x40 and ends at 0x57. The last location in memory is 0x67. Locations 0x58:0x67 are not displayed.
+The extra DDRAM memory is there to support 40 character displays and although not displayed, it could be used to store other data.
+The character displayed will be from the ROM table for the data at that address. Data for Alpha-numeric ASCII start at 0x30.
+
+When sending 8-bits on the 4-bit interface, the upper-nibble is sent first on DB7:4, then the lower nibble is shifted into the upper 
+position and sent on DB7:4. The E line acts as a falling edge write pulse or an active high read. So, the BUSY bit is read when E=1.
+Every write or read operation in 4-bit mode requires two E pulses.
+	Use 	data = read4bits() & 0xF0;
+		data |= read4bits() >> 4;
+
+See table 6 and Figure 11 for a list of commands and bit function definitions.
+
+Commands to be implemented (RS=0, R/W=0):
+CLEAR_DISPLAY	0x01
+RETURN_HOME	0x02
+ENTRY_MODE	0x04 | 
+	INCREAMENT_ADRS	0x02
+	DECREMENT_ADRS	0x00
+	SHIFT_ENABLE	0x01
+	SHIFT_DISABLE	0x00
+DISPLAY		0x08 |
+	DISPLAY_ON	0x04
+	DISPLAY_OFF	0x00
+	CURSOR_ON	0x02
+	CURSOR_OFF	0x00
+	BLINK_ON	0x01
+	BLINK_OFF	0x00
+CURSOR_DISPLAY_SHIFT	n/a
+FUNCTION_SET	0x20 |
+	DL_8_BITS	0x10
+	DL_4_BITS	0x00
+	N_2_LINES	0x80
+	N_1_LINE	0x00
+	F_5X10		0x40
+	F_5X8		0x00
+SET_CGRAM ADRS	0x40 | ADRS (0x3F:0x00)
+SET_DDRAM_ADRS	0x80 | ADRS (0x7F:0x00)
+
+Command Read (RS=0, R/W=1)
+READ_BUSY	<- DB7
+
+Write Data (RS=1, R/W=0)	Address counter will increment or decremtent based on ENTRY_MODE command.
+Data	-> 0xFF:0x00
+
+Read Data (RS=1, R/W=1)		Address counter will increment or decremtent based on ENTRY_MODE command.
+Data	<- 0xFF:0x00
+
+Based on this information, a simple architecture can be developed consisting of:
+  Atomic Functions: Lowest level hardware interface operations controlling pins and data transfers.
+  Compound Functions: Mid-level operations that call multiple Atomic functions to preform basic processes.
+  Abstract Functions: High-level operations that preform user friendly processes.
+
+ATOMIC Functions
+uint8_t toggleE();		// toggle E line and read DB7:4 while E=1. Use return to check BUSY if needed, else (void).
+
+void write4bit(uint8_t data);	// Write 8-bits in two 4-bit operations.
+
+uint8_t read4bit();		// Read 8-bits in two 4-bit operations.
+
+COMPOUND Functions
+bool writeCommand(uint8_t cmd);	// Send command. Check BUSY first. Internal wait (5ms max). If still BUSY, return false, else true.
+
+void writeData(uint8_t data);	// Send data to the display.
+
+uint8_t readData();		// Read data from the display.
+
+ABSTRACT Functions
+clearDisplay();			// Invokes the CLEAR_DISPLAY command.
+
+returnHome();			// Invokes the RETURN_HOME command. Returns cursor to line 1, position 0.
+
+initDisplay();			// Send display reset commands.
+
+displayCursor(bool state);	// state=true, Cusor ON.	state=false, Cursor OFF.
+
+setDDadrs(uint8_t line, uint8_t pos);	// Line = 1 or 2, pos = 0 to 23.
+
+setCGadrs(uint8_t adrs);	// adrs = 0x00:0x3F
+
+printString(char* str);		// send NULL terminated string to display.
+
+printChar(uint8_t char);	// send ASCII char to display.
+
+

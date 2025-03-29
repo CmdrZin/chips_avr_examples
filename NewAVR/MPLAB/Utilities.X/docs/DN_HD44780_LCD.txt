@@ -1,0 +1,84 @@
+DN_HD44780_LCD.txt
+27mar25 ndp
+
+
+Design Notes for a HD44780 LCD driver. Display is a 2z24 line LCD.
+
+ref1: RD_HD44780_LCD.txt - Reference design with project information.
+
+Target: ATtiny AVR SIOC-14 devices (ATtiny814, ATtiny1614, etc.) using the 4-bit data interface.
+
+IDE: MPLAB X IDE v6.15
+
+Files: lcd_hd44780.c, lcd_hd44780.h
+
+
+This design will be primarily for the LCD driver. The main() code will cycle through the various commands to show the drivers capabilities.
+Other project should be able to use these files for adding an LCD display.
+
+The system default of 20 MHz with a DIV6 for CLK_PER will be used.
+The RTC will be used to provide the 1ms tic for the millis() function.
+
+The first order of business is to assign the I/O pins per the schematic ITMC_IV_10_LCD.pdf file. PORTA bits will be used for control and 
+PORTB bits will be used for data. A status LED will also be added to PA7.
+
+PORTA	LCD
+PA4	RS
+PA5	R/W
+PA6	E
+
+PA7	Status LED
+
+PORTB	LCD
+PB0	DB4
+PB1	DB5
+PB2	DB6
+PB3	DB7
+
+These and the bit groups for the various commands will be in the .c file. The .h file will have includes and prototypes.
+
+The initial architecture from the reference design will be the starting point for code development.[1] These are given below.
+
+ATOMIC Functions
+uint8_t toggleE();		// toggle E line and read DB7:4 while E=1. Use return to check BUSY if needed, else (void).
+
+void write4bit(uint8_t data);	// Write 8-bits in two 4-bit operations.
+
+uint8_t read4bit();		// Read 8-bits in two 4-bit operations.
+
+COMPOUND Functions
+bool writeCommand(uint8_t cmd);	// Send command. Check BUSY first. Internal wait (5ms max). If still BUSY, return false, else true.
+
+void writeData(uint8_t data);	// Send data to the display.
+
+uint8_t readData();		// Read data from the display.
+
+ABSTRACT Functions
+clearDisplay();			// Invokes the CLEAR_DISPLAY command.
+
+returnHome();			// Invokes the RETURN_HOME command. Returns cursor to line 1, position 0.
+
+initDisplay();			// Send display reset commands.
+
+displayCursor(bool state);	// state=true, Cusor ON.	state=false, Cursor OFF.
+
+setDDadrs(uint8_t line, uint8_t pos);	// Line = 1 or 2, pos = 0 to 23.
+
+setCGadrs(uint8_t adrs);	// adrs = 0x00:0x3F
+
+lcd_print(uint8_t line, uint8_t pos, char* str);	// send NULL terminated string to display.
+
+printChar(uint8_t char);	// send ASCII char to display.
+
+Startup Sequence after POR for 4-bit operation:
+lcd_writeCommand8NB(LCD_SET_FUNCTION | LCD_DL_8_BITS);		// set for 8bit
+lcd_writeCommand8NB(LCD_SET_FUNCTION | LCD_DL_8_BITS);		// set for 8bit
+lcd_writeCommand8NB(LCD_SET_FUNCTION | LCD_DL_8_BITS);		// set for 8bit
+lcd_writeCommand8NB(LCD_SET_FUNCTION | LCD_DL_4_BITS);		// set for 4bit
+lcd_writeCommand(LCD_SET_FUNCTION | LCD_DL_4_BITS | LCD_N_2_LINES | LCD_F_5X8);
+lcd_writeCommand(LCD_DISPLAY_ONOFF | LCD_DISPLAY_ON | LCD_CURSOR_ON | LCD_BLINK_OFF);
+lcd_writeCommand(LCD_CLEAR_DISPLAY);
+lcd_writeCommand(LCD_SET_ENTRY_MODE | LCD_INCREMENT_ADRS);
+// Display some text
+lcd_writeRam('H');
+lcd_writeRam('O');

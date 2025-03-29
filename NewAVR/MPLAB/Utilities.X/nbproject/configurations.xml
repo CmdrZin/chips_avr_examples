@@ -4,6 +4,10 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
+      <itemPath>mod_led.h</itemPath>
+      <itemPath>serialPoll.h</itemPath>
+      <itemPath>sysTime.h</itemPath>
+      <itemPath>twiRegSlave.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -14,13 +18,9 @@
                    projectFiles="true">
       <itemPath>main.c</itemPath>
       <itemPath>mod_led.c</itemPath>
-      <itemPath>mod_led.h</itemPath>
       <itemPath>serialPoll.c</itemPath>
-      <itemPath>serialPoll.h</itemPath>
       <itemPath>sysTime.c</itemPath>
-      <itemPath>sysTime.h</itemPath>
       <itemPath>twiRegSlave.c</itemPath>
-      <itemPath>twiRegSlave.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -39,13 +39,13 @@
         <targetDevice>ATmega4809</targetDevice>
         <targetHeader></targetHeader>
         <targetPluginBoard></targetPluginBoard>
-        <platformTool>nEdbgTool</platformTool>
+        <platformTool>noID</platformTool>
         <languageToolchain>XC8</languageToolchain>
         <languageToolchainVersion>2.45</languageToolchainVersion>
         <platform>3</platform>
       </toolsSet>
       <packs>
-        <pack name="ATmega_DFP" vendor="Microchip" version="2.2.108"/>
+        <pack name="ATmega_DFP" vendor="Microchip" version="3.2.269"/>
       </packs>
       <ScriptingSettings>
       </ScriptingSettings>
@@ -98,9 +98,9 @@
         <property key="optimization-level" value="-O1"/>
         <property key="optimization-speed" value="false"/>
         <property key="optimization-stable-enable" value="false"/>
-        <property key="pack-struct" value="true"/>
         <property key="preprocess-assembler" value="true"/>
         <property key="short-enums" value="true"/>
+        <property key="tentative-definitions" value="-fno-common"/>
         <property key="undefine-macros" value=""/>
         <property key="use-cci" value="false"/>
         <property key="use-iar" value="false"/>
@@ -159,13 +159,18 @@
         <property key="communication.activationmode" value="nohv"/>
         <property key="communication.interface" value="updi"/>
         <property key="communication.speed" value="0.500"/>
+        <property key="debugoptions.debug-startup" value="Use system settings"/>
+        <property key="debugoptions.reset-behaviour" value="Use system settings"/>
         <property key="debugoptions.useswbreakpoints" value="false"/>
+        <property key="event.recorder.enabled" value="false"/>
+        <property key="event.recorder.scvd.files" value=""/>
         <property key="firmware.path"
                   value="Press to browse for a specific firmware version"/>
         <property key="firmware.toolpack"
                   value="Press to select which tool pack to use"/>
         <property key="firmware.update.action" value="firmware.update.use.latest"/>
         <property key="freeze.timers" value="false"/>
+        <property key="lastid" value=""/>
         <property key="memories.aux" value="false"/>
         <property key="memories.bootflash" value="true"/>
         <property key="memories.configurationmemory" value="true"/>
@@ -199,15 +204,19 @@
       </Tool>
       <XC8-CO>
         <property key="coverage-enable" value=""/>
+        <property key="stack-guidance" value="false"/>
       </XC8-CO>
       <XC8-config-global>
         <property key="advanced-elf" value="true"/>
+        <property key="constdata-progmem" value="true"/>
         <property key="gcc-opt-driver-new" value="true"/>
         <property key="gcc-opt-std" value="-std=c99"/>
         <property key="gcc-output-file-format" value="dwarf-3"/>
+        <property key="mapped-progmem" value="false"/>
         <property key="omit-pack-options" value="false"/>
         <property key="omit-pack-options-new" value="1"/>
         <property key="output-file-format" value="-mcof,+elf"/>
+        <property key="smart-io-format" value=""/>
         <property key="stack-size-high" value="auto"/>
         <property key="stack-size-low" value="auto"/>
         <property key="stack-size-main" value="auto"/>
@@ -220,13 +229,18 @@
         <property key="communication.activationmode" value="nohv"/>
         <property key="communication.interface" value="updi"/>
         <property key="communication.speed" value="0.500"/>
+        <property key="debugoptions.debug-startup" value="Use system settings"/>
+        <property key="debugoptions.reset-behaviour" value="Use system settings"/>
         <property key="debugoptions.useswbreakpoints" value="false"/>
+        <property key="event.recorder.enabled" value="false"/>
+        <property key="event.recorder.scvd.files" value=""/>
         <property key="firmware.path"
                   value="Press to browse for a specific firmware version"/>
         <property key="firmware.toolpack"
                   value="Press to select which tool pack to use"/>
         <property key="firmware.update.action" value="firmware.update.use.latest"/>
         <property key="freeze.timers" value="false"/>
+        <property key="lastid" value=""/>
         <property key="memories.aux" value="false"/>
         <property key="memories.bootflash" value="true"/>
         <property key="memories.configurationmemory" value="true"/>
@@ -240,7 +254,6 @@
                   value="${memories.instruction.ram.ranges}"/>
         <property key="memories.programmemory" value="true"/>
         <property key="memories.programmemory.ranges" value="0-5fff"/>
-        <property key="memories.rww" value="true"/>
         <property key="poweroptions.powerenable" value="false"/>
         <property key="programoptions.eraseb4program" value="true"/>
         <property key="programoptions.preservedataflash" value="false"/>
