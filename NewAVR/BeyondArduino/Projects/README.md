@@ -20,3 +20,5 @@ These are projects that use MPLAB X for ATtiny AVR Series-1 devices.
 | ITMC_III_10_AC.X.zip | Analog Comparator setup.|   
 | ITMC_III_12.X.zip | EEPROM Access setup.|   
 | ITMC_IV_1_LEDS.X.zip | 20 LEDs controlled by 5 lines setup.|   
+| ITMC_IV_10_LCD.X.zip | HD44780 24x2 LCD driver.|   
+| ITMC_IV_11_IR_LCD.X.zip | Visio/LG IR decoder with LCD display.|   
