@@ -22,3 +22,5 @@ These are projects that use MPLAB X for ATtiny AVR Series-1 devices.
 | ITMC_IV_1_LEDS.X.zip | 20 LEDs controlled by 5 lines setup.|   
 | ITMC_IV_10_LCD.X.zip | HD44780 24x2 LCD driver.|   
 | ITMC_IV_11_IR_LCD.X.zip | Visio/LG IR decoder with LCD display.|   
+| ITMC_IV_12_Audio_DAC.X.zip | DDS Audio signal generator with DAC output.|   
+| ITMC_IV_12_Audio_PWM3.X.zip | DDS Audio signal generator with PWM outputs.|   
